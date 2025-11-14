@@ -82,7 +82,6 @@ jobs:
       - name: Verify and Generate Aggregate Coverage
         run: |
           ./mvnw failsafe:verify -Djacoco.skip.check=true -B
-          ./mvnw jacoco:merge jacoco:report-aggregate -B
           echo "✅ Aggregate coverage report generated"
 
       - name: Create coverage artifacts directory
