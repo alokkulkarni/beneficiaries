@@ -1,0 +1,44 @@
+-- Schema for beneficiaries table
+CREATE TABLE IF NOT EXISTS beneficiaries (
+    id BIGSERIAL PRIMARY KEY,
+    customer_id VARCHAR(50) NOT NULL,
+    account_number VARCHAR(50),
+    beneficiary_name VARCHAR(255) NOT NULL,
+    beneficiary_account_number VARCHAR(50) NOT NULL,
+    beneficiary_bank_code VARCHAR(20) NOT NULL,
+    beneficiary_bank_name VARCHAR(255),
+    beneficiary_type VARCHAR(20) NOT NULL DEFAULT 'DOMESTIC',
+    status VARCHAR(20) NOT NULL DEFAULT 'ACTIVE',
+    created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    CONSTRAINT uk_customer_beneficiary_account UNIQUE (customer_id, beneficiary_account_number, status)
+);
+
+-- Indexes for performance
+CREATE INDEX IF NOT EXISTS idx_beneficiaries_customer_id ON beneficiaries(customer_id);
+CREATE INDEX IF NOT EXISTS idx_beneficiaries_customer_account ON beneficiaries(customer_id, account_number);
+CREATE INDEX IF NOT EXISTS idx_beneficiaries_status ON beneficiaries(status);
+
+-- Test data for BDD scenarios
+-- Customer CUST001 beneficiaries
+INSERT INTO beneficiaries (customer_id, account_number, beneficiary_name, beneficiary_account_number, beneficiary_bank_code, beneficiary_bank_name, beneficiary_type, status, created_at, updated_at)
+VALUES 
+    ('CUST001', 'ACC001', 'John Doe', 'BEN001', 'BANK001', 'First Bank', 'DOMESTIC', 'ACTIVE', CURRENT_TIMESTAMP, CURRENT_TIMESTAMP),
+    ('CUST001', 'ACC001', 'Jane Smith', 'BEN002', 'BANK002', 'Second Bank', 'INTERNATIONAL', 'ACTIVE', CURRENT_TIMESTAMP, CURRENT_TIMESTAMP),
+    ('CUST001', 'ACC002', 'Bob Johnson', 'BEN003', 'BANK001', 'First Bank', 'DOMESTIC', 'ACTIVE', CURRENT_TIMESTAMP, CURRENT_TIMESTAMP);
+
+-- Customer CUST002 beneficiaries
+INSERT INTO beneficiaries (customer_id, account_number, beneficiary_name, beneficiary_account_number, beneficiary_bank_code, beneficiary_bank_name, beneficiary_type, status, created_at, updated_at)
+VALUES 
+    ('CUST002', 'ACC003', 'Alice Williams', 'BEN004', 'BANK003', 'Third Bank', 'DOMESTIC', 'ACTIVE', CURRENT_TIMESTAMP, CURRENT_TIMESTAMP),
+    ('CUST002', 'ACC003', 'Charlie Brown', 'BEN005', 'BANK004', 'Fourth Bank', 'INTERNATIONAL', 'ACTIVE', CURRENT_TIMESTAMP, CURRENT_TIMESTAMP);
+
+-- Customer CUST003 beneficiaries (for delete scenarios)
+INSERT INTO beneficiaries (customer_id, account_number, beneficiary_name, beneficiary_account_number, beneficiary_bank_code, beneficiary_bank_name, beneficiary_type, status, created_at, updated_at)
+VALUES 
+    ('CUST003', 'ACC004', 'David Miller', 'BEN006', 'BANK005', 'Fifth Bank', 'DOMESTIC', 'ACTIVE', CURRENT_TIMESTAMP, CURRENT_TIMESTAMP);
+
+-- Soft deleted beneficiary (for testing soft delete verification)
+INSERT INTO beneficiaries (customer_id, account_number, beneficiary_name, beneficiary_account_number, beneficiary_bank_code, beneficiary_bank_name, beneficiary_type, status, created_at, updated_at)
+VALUES 
+    ('CUST004', 'ACC005', 'Eva Garcia', 'BEN007', 'BANK006', 'Sixth Bank', 'DOMESTIC', 'DELETED', CURRENT_TIMESTAMP, CURRENT_TIMESTAMP);
