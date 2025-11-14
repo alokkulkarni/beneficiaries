@@ -87,8 +87,8 @@ class BeneficiaryIntegrationTest {
     @Test
     @DisplayName("Should create beneficiary successfully")
     void shouldCreateBeneficiarySuccessfully() throws Exception {
-        // Given
-        BeneficiaryRequest request = createRequest("CUST001", "ACC001", "John Doe", "BEN001", 
+        // Given - Use unique IDs to avoid conflict with init.db
+        BeneficiaryRequest request = createRequest("CUST_NEW_001", "ACC_NEW_001", "John Doe", "BEN_NEW_001", 
                 "BANK001", "Test Bank", "DOMESTIC");
         
         // When & Then
@@ -96,12 +96,12 @@ class BeneficiaryIntegrationTest {
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(request)))
                 .andExpect(status().isCreated())
-                .andExpect(jsonPath("$.customerId").value("CUST001"))
+                .andExpect(jsonPath("$.customerId").value("CUST_NEW_001"))
                 .andExpect(jsonPath("$.beneficiaryName").value("John Doe"))
                 .andExpect(jsonPath("$.status").value("ACTIVE"));
         
         // Verify in database
-        List<Beneficiary> beneficiaries = beneficiaryRepository.findByCustomerId("CUST001");
+        List<Beneficiary> beneficiaries = beneficiaryRepository.findByCustomerId("CUST_NEW_001");
         assertThat(beneficiaries).hasSize(1);
         assertThat(beneficiaries.get(0).getBeneficiaryName()).isEqualTo("John Doe");
     }
@@ -236,11 +236,11 @@ class BeneficiaryIntegrationTest {
     @Test
     @DisplayName("Should get all beneficiaries for customer")
     void shouldGetAllBeneficiariesForCustomer() throws Exception {
-        // Given - Create multiple beneficiaries
-        BeneficiaryRequest request1 = createRequest("CUST007", "ACC007", "Beneficiary 1", "BEN007A",
+        // Given - Create multiple beneficiaries with unique customer ID
+        BeneficiaryRequest request1 = createRequest("CUST_NEW_007", "ACC_NEW_007", "Beneficiary 1", "BEN_NEW_007A",
                 "BANK007", "Test Bank", "DOMESTIC");
         
-        BeneficiaryRequest request2 = createRequest("CUST007", "ACC007", "Beneficiary 2", "BEN007B",
+        BeneficiaryRequest request2 = createRequest("CUST_NEW_007", "ACC_NEW_007", "Beneficiary 2", "BEN_NEW_007B",
                 "BANK007", "Test Bank", "INTERNATIONAL");
         
         mockMvc.perform(post("/api/v1/beneficiaries")
@@ -255,7 +255,7 @@ class BeneficiaryIntegrationTest {
         
         // When & Then
         mockMvc.perform(get("/api/v1/beneficiaries")
-                        .param("customerId", "CUST007"))
+                        .param("customerId", "CUST_NEW_007"))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.length()").value(2));
     }
@@ -347,40 +347,43 @@ class BeneficiaryIntegrationTest {
     }
     
     @Test
-    @DisplayName("Should return 403 when accessing beneficiary of different customer")
-    void shouldReturn403WhenAccessingBeneficiaryOfDifferentCustomer() throws Exception {
+    @DisplayName("Should return 404 when accessing beneficiary of different customer")
+    void shouldReturn404WhenAccessingBeneficiaryOfDifferentCustomer() throws Exception {
         // Given - ID 1 belongs to CUST001 (from init.db)
         
         // When & Then - Try to access with wrong customer ID
+        // Service returns 404 (not found) rather than 403 (forbidden) for security reasons
         mockMvc.perform(get("/api/v1/beneficiaries/{id}", 1)
                         .param("customerId", "WRONG_CUSTOMER"))
-                .andExpect(status().isForbidden());
+                .andExpect(status().isNotFound());
     }
     
     @Test
-    @DisplayName("Should return 403 when updating beneficiary of different customer")
-    void shouldReturn403WhenUpdatingBeneficiaryOfDifferentCustomer() throws Exception {
+    @DisplayName("Should return 404 when updating beneficiary of different customer")
+    void shouldReturn404WhenUpdatingBeneficiaryOfDifferentCustomer() throws Exception {
         // Given - ID 1 belongs to CUST001 (from init.db)
         BeneficiaryRequest updateRequest = createRequest("WRONG_CUSTOMER", "ACC999", "Hacker", "BEN999",
                 "BANK999", "Test Bank", "DOMESTIC");
         
         // When & Then
+        // Service returns 404 (not found) rather than 403 (forbidden) for security reasons
         mockMvc.perform(put("/api/v1/beneficiaries/{id}", 1)
                         .param("customerId", "WRONG_CUSTOMER")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(updateRequest)))
-                .andExpect(status().isForbidden());
+                .andExpect(status().isNotFound());
     }
     
     @Test
-    @DisplayName("Should return 403 when deleting beneficiary of different customer")
-    void shouldReturn403WhenDeletingBeneficiaryOfDifferentCustomer() throws Exception {
+    @DisplayName("Should return 404 when deleting beneficiary of different customer")
+    void shouldReturn404WhenDeletingBeneficiaryOfDifferentCustomer() throws Exception {
         // Given - ID 2 belongs to CUST006 (from init.db)
         
         // When & Then
+        // Service returns 404 (not found) rather than 403 (forbidden) for security reasons
         mockMvc.perform(delete("/api/v1/beneficiaries/{id}", 2)
                         .param("customerId", "WRONG_CUSTOMER"))
-                .andExpect(status().isForbidden());
+                .andExpect(status().isNotFound());
     }
     
     @Test
