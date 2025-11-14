@@ -37,12 +37,22 @@ jobs:
           distribution: ${{ env.JAVA_DISTRIBUTION }}
           cache: 'maven'
 
-      - name: Cache Maven packages
+      - name: Restore Maven Dependencies
+        id: cache-maven
         uses: actions/cache@v4
         with:
-          path: ~/.m2
-          key: ${{ runner.os }}-m2-${{ hashFiles('**/pom.xml') }}
-          restore-keys: ${{ runner.os }}-m2
+          path: |
+            ~/.m2/repository
+            !~/.m2/repository/com/alok
+          key: ${{ runner.os }}-maven-${{ hashFiles('**/pom.xml') }}
+          restore-keys: |
+            ${{ runner.os }}-maven-
+
+      - name: Download Maven Dependencies
+        if: steps.cache-maven.outputs.cache-hit != 'true'
+        run: |
+          ./mvnw dependency:go-offline -B
+          echo "✅ Maven dependencies downloaded and cached"
 
       - name: Generate run metadata
         id: metadata

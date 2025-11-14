@@ -35,14 +35,15 @@ class BeneficiaryIntegrationTest {
     
     @Container
     static PostgreSQLContainer<?> postgres = new PostgreSQLContainer<>(
-            DockerImageName.parse("postgres:16-alpine"))
+            DockerImageName.parse("testcontainers-postgres:16-alpine"))
             .withDatabaseName("beneficiaries_test")
             .withUsername("test")
-            .withPassword("test");
+            .withPassword("test")
+            .withInitScript("init.db");
     
     @Container
     static GenericContainer<?> redis = new GenericContainer<>(
-            DockerImageName.parse("redis:7-alpine"))
+            DockerImageName.parse("testcontainers-redis:7-alpine"))
             .withExposedPorts(6379);
     
     @DynamicPropertySource
@@ -65,7 +66,8 @@ class BeneficiaryIntegrationTest {
     
     @BeforeEach
     void setUp() {
-        beneficiaryRepository.deleteAll();
+        // Don't delete all - init.db provides test data
+        // Only clean up data created by dynamic tests if needed
     }
     
     private BeneficiaryRequest createRequest(String customerId, String accountNumber, String beneficiaryName,
@@ -307,5 +309,206 @@ class BeneficiaryIntegrationTest {
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(request)))
                 .andExpect(status().isCreated());
+    }
+    
+    // ===== Negative Test Scenarios Using Pre-populated Data =====
+    
+    @Test
+    @DisplayName("Should return 404 when getting non-existent beneficiary")
+    void shouldReturn404WhenGettingNonExistentBeneficiary() throws Exception {
+        // When & Then
+        mockMvc.perform(get("/api/v1/beneficiaries/{id}", 99999)
+                        .param("customerId", "CUST001"))
+                .andExpect(status().isNotFound());
+    }
+    
+    @Test
+    @DisplayName("Should return 404 when updating non-existent beneficiary")
+    void shouldReturn404WhenUpdatingNonExistentBeneficiary() throws Exception {
+        // Given
+        BeneficiaryRequest updateRequest = createRequest("CUST001", "ACC001", "Update Test", "BEN999",
+                "BANK001", "Test Bank", "DOMESTIC");
+        
+        // When & Then
+        mockMvc.perform(put("/api/v1/beneficiaries/{id}", 99999)
+                        .param("customerId", "CUST001")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(updateRequest)))
+                .andExpect(status().isNotFound());
+    }
+    
+    @Test
+    @DisplayName("Should return 404 when deleting non-existent beneficiary")
+    void shouldReturn404WhenDeletingNonExistentBeneficiary() throws Exception {
+        // When & Then
+        mockMvc.perform(delete("/api/v1/beneficiaries/{id}", 99999)
+                        .param("customerId", "CUST001"))
+                .andExpect(status().isNotFound());
+    }
+    
+    @Test
+    @DisplayName("Should return 403 when accessing beneficiary of different customer")
+    void shouldReturn403WhenAccessingBeneficiaryOfDifferentCustomer() throws Exception {
+        // Given - ID 1 belongs to CUST001 (from init.db)
+        
+        // When & Then - Try to access with wrong customer ID
+        mockMvc.perform(get("/api/v1/beneficiaries/{id}", 1)
+                        .param("customerId", "WRONG_CUSTOMER"))
+                .andExpect(status().isForbidden());
+    }
+    
+    @Test
+    @DisplayName("Should return 403 when updating beneficiary of different customer")
+    void shouldReturn403WhenUpdatingBeneficiaryOfDifferentCustomer() throws Exception {
+        // Given - ID 1 belongs to CUST001 (from init.db)
+        BeneficiaryRequest updateRequest = createRequest("WRONG_CUSTOMER", "ACC999", "Hacker", "BEN999",
+                "BANK999", "Test Bank", "DOMESTIC");
+        
+        // When & Then
+        mockMvc.perform(put("/api/v1/beneficiaries/{id}", 1)
+                        .param("customerId", "WRONG_CUSTOMER")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(updateRequest)))
+                .andExpect(status().isForbidden());
+    }
+    
+    @Test
+    @DisplayName("Should return 403 when deleting beneficiary of different customer")
+    void shouldReturn403WhenDeletingBeneficiaryOfDifferentCustomer() throws Exception {
+        // Given - ID 2 belongs to CUST006 (from init.db)
+        
+        // When & Then
+        mockMvc.perform(delete("/api/v1/beneficiaries/{id}", 2)
+                        .param("customerId", "WRONG_CUSTOMER"))
+                .andExpect(status().isForbidden());
+    }
+    
+    @Test
+    @DisplayName("Should return 409 when creating duplicate with pre-existing data")
+    void shouldReturn409WhenCreatingDuplicateWithPreExistingData() throws Exception {
+        // Given - CUST003 already has BEN003 (from init.db - ID 5)
+        BeneficiaryRequest request = createRequest("CUST003", "ACC003", "Duplicate Test", "BEN003",
+                "BANK004", "Test Bank", "DOMESTIC");
+        
+        // When & Then
+        mockMvc.perform(post("/api/v1/beneficiaries")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(request)))
+                .andExpect(status().isConflict());
+    }
+    
+    @Test
+    @DisplayName("Should return 400 for missing required fields")
+    void shouldReturn400ForMissingRequiredFields() throws Exception {
+        // Given - Missing beneficiaryName
+        String invalidRequest = """
+                {
+                    "customerId": "CUST010",
+                    "accountNumber": "ACC010",
+                    "beneficiaryAccountNumber": "BEN010",
+                    "beneficiaryBankCode": "BANK010",
+                    "beneficiaryBankName": "Test Bank",
+                    "beneficiaryType": "DOMESTIC"
+                }
+                """;
+        
+        // When & Then
+        mockMvc.perform(post("/api/v1/beneficiaries")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(invalidRequest))
+                .andExpect(status().isBadRequest());
+    }
+    
+    @Test
+    @DisplayName("Should return 400 for invalid bank code format")
+    void shouldReturn400ForInvalidBankCodeFormat() throws Exception {
+        // Given
+        BeneficiaryRequest request = createRequest("CUST010", "ACC010", "Invalid Bank Code", "BEN010",
+                "", "Test Bank", "DOMESTIC");  // Empty bank code
+        
+        // When & Then
+        mockMvc.perform(post("/api/v1/beneficiaries")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(request)))
+                .andExpect(status().isBadRequest());
+    }
+    
+    @Test
+    @DisplayName("Should return empty list for customer with no beneficiaries")
+    void shouldReturnEmptyListForCustomerWithNoBeneficiaries() throws Exception {
+        // When & Then
+        mockMvc.perform(get("/api/v1/beneficiaries")
+                        .param("customerId", "CUST_NO_DATA"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.length()").value(0));
+    }
+    
+    @Test
+    @DisplayName("Should retrieve existing beneficiaries from init.db")
+    void shouldRetrieveExistingBeneficiariesFromInitDb() throws Exception {
+        // Given - CUST002 has 3 beneficiaries in init.db (IDs 10, 11, 12)
+        
+        // When & Then
+        mockMvc.perform(get("/api/v1/beneficiaries")
+                        .param("customerId", "CUST002"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.length()").value(3))
+                .andExpect(jsonPath("$[?(@.beneficiaryAccountNumber=='BEN010')]").exists())
+                .andExpect(jsonPath("$[?(@.beneficiaryAccountNumber=='BEN011')]").exists())
+                .andExpect(jsonPath("$[?(@.beneficiaryAccountNumber=='BEN012')]").exists());
+    }
+    
+    @Test
+    @DisplayName("Should filter beneficiaries by account number using init.db data")
+    void shouldFilterBeneficiariesByAccountNumberUsingInitDbData() throws Exception {
+        // Given - CUST003 has beneficiaries with ACC_A and ACC_B in init.db
+        
+        // When & Then - Filter by ACC_A
+        mockMvc.perform(get("/api/v1/beneficiaries")
+                        .param("customerId", "CUST003")
+                        .param("accountNumber", "ACC_A"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.length()").value(2))
+                .andExpect(jsonPath("$[0].accountNumber").value("ACC_A"))
+                .andExpect(jsonPath("$[1].accountNumber").value("ACC_A"));
+    }
+    
+    @Test
+    @DisplayName("Should update existing beneficiary from init.db")
+    void shouldUpdateExistingBeneficiaryFromInitDb() throws Exception {
+        // Given - ID 1 exists with "Old Name" (from init.db)
+        BeneficiaryRequest updateRequest = createRequest("CUST001", "ACC001", "Updated Name", "BEN001",
+                "BANK001", "Updated Bank", "DOMESTIC");
+        
+        // When
+        mockMvc.perform(put("/api/v1/beneficiaries/{id}", 1)
+                        .param("customerId", "CUST001")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(updateRequest)))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.beneficiaryName").value("Updated Name"))
+                .andExpect(jsonPath("$.beneficiaryBankName").value("Updated Bank"));
+        
+        // Then - Verify the update persisted
+        mockMvc.perform(get("/api/v1/beneficiaries/{id}", 1)
+                        .param("customerId", "CUST001"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.beneficiaryName").value("Updated Name"));
+    }
+    
+    @Test
+    @DisplayName("Should delete existing beneficiary from init.db")
+    void shouldDeleteExistingBeneficiaryFromInitDb() throws Exception {
+        // Given - ID 4 exists and belongs to CUST003 (from init.db)
+        
+        // When
+        mockMvc.perform(delete("/api/v1/beneficiaries/{id}", 4)
+                        .param("customerId", "CUST003"))
+                .andExpect(status().isNoContent());
+        
+        // Then - Verify it's soft deleted
+        mockMvc.perform(get("/api/v1/beneficiaries/{id}", 4)
+                        .param("customerId", "CUST003"))
+                .andExpect(status().isNotFound());
     }
 }
