@@ -35,7 +35,7 @@ class BeneficiaryIntegrationTest {
     
     @Container
     static PostgreSQLContainer<?> postgres = new PostgreSQLContainer<>(
-            DockerImageName.parse("testcontainers-postgres:16-alpine"))
+            DockerImageName.parse("ghcr.io/alokkulkarni/testcontainers-registry/testcontainers/postgres:16-alpine"))
             .withDatabaseName("beneficiaries_test")
             .withUsername("test")
             .withPassword("test")
@@ -43,7 +43,7 @@ class BeneficiaryIntegrationTest {
     
     @Container
     static GenericContainer<?> redis = new GenericContainer<>(
-            DockerImageName.parse("testcontainers-redis:7-alpine"))
+            DockerImageName.parse("ghcr.io/alokkulkarni/testcontainers-registry/testcontainers/redis:7-alpine"))
             .withExposedPorts(6379);
     
     @DynamicPropertySource

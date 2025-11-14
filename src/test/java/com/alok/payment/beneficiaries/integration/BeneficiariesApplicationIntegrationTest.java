@@ -13,7 +13,7 @@ class BeneficiariesApplicationIntegrationTest {
 
 	@Container
 	@ServiceConnection
-	static PostgreSQLContainer<?> postgres = new PostgreSQLContainer<>("testcontainers-postgres:16-alpine")
+	static PostgreSQLContainer<?> postgres = new PostgreSQLContainer<>("ghcr.io/alokkulkarni/testcontainers-registry/testcontainers/postgres:16-alpine")
 			.withDatabaseName("beneficiaries_test")
 			.withUsername("test")
 			.withPassword("test");
