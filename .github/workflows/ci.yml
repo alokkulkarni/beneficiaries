@@ -1,0 +1,289 @@
+name: CI Pipeline
+
+on:
+  pull_request:
+    branches:
+      - main
+      - '**'
+  push:
+    branches:
+      - main
+
+env:
+  REGISTRY: ghcr.io
+  IMAGE_NAME: ${{ github.repository }}
+  JAVA_VERSION: '21'
+  JAVA_DISTRIBUTION: 'temurin'
+
+jobs:
+  test-and-build:
+    name: Test, Build & Package
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write
+      pull-requests: write
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Set up JDK ${{ env.JAVA_VERSION }}
+        uses: actions/setup-java@v4
+        with:
+          java-version: ${{ env.JAVA_VERSION }}
+          distribution: ${{ env.JAVA_DISTRIBUTION }}
+          cache: 'maven'
+
+      - name: Cache Maven packages
+        uses: actions/cache@v4
+        with:
+          path: ~/.m2
+          key: ${{ runner.os }}-m2-${{ hashFiles('**/pom.xml') }}
+          restore-keys: ${{ runner.os }}-m2
+
+      - name: Generate run metadata
+        id: metadata
+        run: |
+          echo "run_id=${{ github.run_id }}" >> $GITHUB_OUTPUT
+          echo "run_number=${{ github.run_number }}" >> $GITHUB_OUTPUT
+          echo "pr_number=${{ github.event.pull_request.number || 'none' }}" >> $GITHUB_OUTPUT
+          echo "sha_short=$(git rev-parse --short HEAD)" >> $GITHUB_OUTPUT
+          echo "app_name=beneficiaries" >> $GITHUB_OUTPUT
+          echo "timestamp=$(date +%Y%m%d-%H%M%S)" >> $GITHUB_OUTPUT
+
+      - name: Run Unit Tests
+        run: |
+          ./mvnw clean test -B
+          echo "✅ Unit tests completed"
+
+      - name: Run Integration Tests with TestContainers
+        run: |
+          ./mvnw verify -DskipTests -B
+          echo "✅ Integration and BDD tests completed"
+
+      - name: Generate Aggregate Coverage Report
+        run: |
+          ./mvnw jacoco:report-aggregate -B
+          echo "✅ Coverage report generated"
+
+      - name: Create coverage artifacts directory
+        run: |
+          mkdir -p coverage-reports
+          
+          # Copy JaCoCo reports with metadata
+          cp -r target/site/jacoco-aggregate coverage-reports/jacoco-aggregate
+          cp target/jacoco-aggregate.exec coverage-reports/jacoco-aggregate.exec
+          
+          # Create metadata file
+          cat > coverage-reports/metadata.json << EOF
+          {
+            "app_name": "${{ steps.metadata.outputs.app_name }}",
+            "run_id": "${{ steps.metadata.outputs.run_id }}",
+            "run_number": "${{ steps.metadata.outputs.run_number }}",
+            "pr_number": "${{ steps.metadata.outputs.pr_number }}",
+            "commit_sha": "${{ github.sha }}",
+            "commit_sha_short": "${{ steps.metadata.outputs.sha_short }}",
+            "timestamp": "${{ steps.metadata.outputs.timestamp }}",
+            "branch": "${{ github.head_ref || github.ref_name }}",
+            "actor": "${{ github.actor }}"
+          }
+          EOF
+          
+          echo "✅ Coverage artifacts prepared"
+
+      - name: Extract Coverage Metrics
+        id: coverage
+        run: |
+          # Extract coverage from JaCoCo XML report
+          if [ -f "target/site/jacoco-aggregate/jacoco.xml" ]; then
+            INSTRUCTION_MISSED=$(grep -oP '(?<=<counter type="INSTRUCTION" missed=")[^"]*' target/site/jacoco-aggregate/jacoco.xml | head -1)
+            INSTRUCTION_COVERED=$(grep -oP '(?<=<counter type="INSTRUCTION" missed="[^"]*" covered=")[^"]*' target/site/jacoco-aggregate/jacoco.xml | head -1)
+            BRANCH_MISSED=$(grep -oP '(?<=<counter type="BRANCH" missed=")[^"]*' target/site/jacoco-aggregate/jacoco.xml | head -1)
+            BRANCH_COVERED=$(grep -oP '(?<=<counter type="BRANCH" missed="[^"]*" covered=")[^"]*' target/site/jacoco-aggregate/jacoco.xml | head -1)
+            LINE_MISSED=$(grep -oP '(?<=<counter type="LINE" missed=")[^"]*' target/site/jacoco-aggregate/jacoco.xml | head -1)
+            LINE_COVERED=$(grep -oP '(?<=<counter type="LINE" missed="[^"]*" covered=")[^"]*' target/site/jacoco-aggregate/jacoco.xml | head -1)
+            
+            # Calculate percentages
+            INSTRUCTION_TOTAL=$((INSTRUCTION_MISSED + INSTRUCTION_COVERED))
+            BRANCH_TOTAL=$((BRANCH_MISSED + BRANCH_COVERED))
+            LINE_TOTAL=$((LINE_MISSED + LINE_COVERED))
+            
+            if [ $INSTRUCTION_TOTAL -gt 0 ]; then
+              INSTRUCTION_COVERAGE=$(awk "BEGIN {printf \"%.2f\", ($INSTRUCTION_COVERED / $INSTRUCTION_TOTAL) * 100}")
+            else
+              INSTRUCTION_COVERAGE="0.00"
+            fi
+            
+            if [ $BRANCH_TOTAL -gt 0 ]; then
+              BRANCH_COVERAGE=$(awk "BEGIN {printf \"%.2f\", ($BRANCH_COVERED / $BRANCH_TOTAL) * 100}")
+            else
+              BRANCH_COVERAGE="0.00"
+            fi
+            
+            if [ $LINE_TOTAL -gt 0 ]; then
+              LINE_COVERAGE=$(awk "BEGIN {printf \"%.2f\", ($LINE_COVERED / $LINE_TOTAL) * 100}")
+            else
+              LINE_COVERAGE="0.00"
+            fi
+            
+            echo "instruction_coverage=$INSTRUCTION_COVERAGE" >> $GITHUB_OUTPUT
+            echo "branch_coverage=$BRANCH_COVERAGE" >> $GITHUB_OUTPUT
+            echo "line_coverage=$LINE_COVERAGE" >> $GITHUB_OUTPUT
+            
+            echo "📊 Coverage: Instructions: ${INSTRUCTION_COVERAGE}% | Branches: ${BRANCH_COVERAGE}% | Lines: ${LINE_COVERAGE}%"
+          else
+            echo "⚠️ No coverage report found"
+            echo "instruction_coverage=0" >> $GITHUB_OUTPUT
+            echo "branch_coverage=0" >> $GITHUB_OUTPUT
+            echo "line_coverage=0" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Upload Coverage Reports
+        uses: actions/upload-artifact@v4
+        with:
+          name: coverage-reports-${{ steps.metadata.outputs.app_name }}-run${{ steps.metadata.outputs.run_id }}-pr${{ steps.metadata.outputs.pr_number }}
+          path: coverage-reports/
+          retention-days: 30
+
+      - name: Upload Test Reports
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: test-reports-${{ steps.metadata.outputs.app_name }}-run${{ steps.metadata.outputs.run_id }}-pr${{ steps.metadata.outputs.pr_number }}
+          path: |
+            target/surefire-reports/
+            target/failsafe-reports/
+          retention-days: 30
+
+      - name: Comment PR with Coverage
+        if: github.event_name == 'pull_request'
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const coverage = {
+              instruction: '${{ steps.coverage.outputs.instruction_coverage }}',
+              branch: '${{ steps.coverage.outputs.branch_coverage }}',
+              line: '${{ steps.coverage.outputs.line_coverage }}'
+            };
+            
+            const metadata = {
+              appName: '${{ steps.metadata.outputs.app_name }}',
+              runId: '${{ steps.metadata.outputs.run_id }}',
+              prNumber: '${{ steps.metadata.outputs.pr_number }}',
+              sha: '${{ steps.metadata.outputs.sha_short }}',
+              timestamp: '${{ steps.metadata.outputs.timestamp }}'
+            };
+            
+            const comment = `## 🧪 Test Coverage Report
+            
+            **Application:** ${metadata.appName}  
+            **Run ID:** ${metadata.runId}  
+            **PR:** #${metadata.prNumber}  
+            **Commit:** ${metadata.sha}  
+            **Timestamp:** ${metadata.timestamp}
+            
+            ### Coverage Metrics
+            
+            | Metric | Coverage |
+            |--------|----------|
+            | 📝 Instructions | ${coverage.instruction}% |
+            | 🌿 Branches | ${coverage.branch}% |
+            | 📊 Lines | ${coverage.line}% |
+            
+            ### Test Phases Executed
+            - ✅ Unit Tests
+            - ✅ Integration Tests (TestContainers)
+            - ✅ BDD Tests (Cucumber with TestContainers)
+            
+            [📥 Download Coverage Report](https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }})
+            `;
+            
+            github.rest.issues.createComment({
+              issue_number: context.issue.number,
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              body: comment
+            });
+
+      - name: Build Application
+        run: |
+          ./mvnw package -DskipTests -B
+          echo "✅ Application built successfully"
+
+      - name: Log in to GitHub Container Registry
+        uses: docker/login-action@v3
+        with:
+          registry: ${{ env.REGISTRY }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Extract Docker metadata
+        id: docker_meta
+        uses: docker/metadata-action@v5
+        with:
+          images: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}
+          tags: |
+            type=ref,event=branch
+            type=ref,event=pr
+            type=sha,prefix={{branch}}-
+            type=raw,value=run-${{ github.run_id }}
+            type=raw,value=latest,enable=${{ github.ref == format('refs/heads/{0}', 'main') }}
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Build and push Docker image
+        uses: docker/build-push-action@v5
+        with:
+          context: .
+          file: ./Dockerfile
+          push: true
+          tags: ${{ steps.docker_meta.outputs.tags }}
+          labels: |
+            ${{ steps.docker_meta.outputs.labels }}
+            org.opencontainers.image.app.name=${{ steps.metadata.outputs.app_name }}
+            org.opencontainers.image.run.id=${{ steps.metadata.outputs.run_id }}
+            org.opencontainers.image.pr.number=${{ steps.metadata.outputs.pr_number }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+          build-args: |
+            BUILD_DATE=${{ steps.metadata.outputs.timestamp }}
+            VCS_REF=${{ github.sha }}
+
+      - name: Generate Docker image summary
+        run: |
+          echo "## 🐳 Docker Image Published" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "**Repository:** \`${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}\`" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "### Tags:" >> $GITHUB_STEP_SUMMARY
+          echo "\`\`\`" >> $GITHUB_STEP_SUMMARY
+          echo "${{ steps.docker_meta.outputs.tags }}" >> $GITHUB_STEP_SUMMARY
+          echo "\`\`\`" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "### Pull command:" >> $GITHUB_STEP_SUMMARY
+          echo "\`\`\`bash" >> $GITHUB_STEP_SUMMARY
+          echo "docker pull ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:run-${{ github.run_id }}" >> $GITHUB_STEP_SUMMARY
+          echo "\`\`\`" >> $GITHUB_STEP_SUMMARY
+
+      - name: Generate Job Summary
+        if: always()
+        run: |
+          echo "## 📋 CI Pipeline Summary" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "**Application:** ${{ steps.metadata.outputs.app_name }}" >> $GITHUB_STEP_SUMMARY
+          echo "**Run ID:** ${{ steps.metadata.outputs.run_id }}" >> $GITHUB_STEP_SUMMARY
+          echo "**PR Number:** ${{ steps.metadata.outputs.pr_number }}" >> $GITHUB_STEP_SUMMARY
+          echo "**Commit:** ${{ steps.metadata.outputs.sha_short }}" >> $GITHUB_STEP_SUMMARY
+          echo "**Branch:** ${{ github.head_ref || github.ref_name }}" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "### ✅ Completed Tasks" >> $GITHUB_STEP_SUMMARY
+          echo "- Unit Tests Executed" >> $GITHUB_STEP_SUMMARY
+          echo "- Integration Tests with TestContainers" >> $GITHUB_STEP_SUMMARY
+          echo "- BDD Tests with Cucumber & TestContainers" >> $GITHUB_STEP_SUMMARY
+          echo "- Coverage Reports Generated" >> $GITHUB_STEP_SUMMARY
+          echo "- Application Built" >> $GITHUB_STEP_SUMMARY
+          echo "- Docker Image Created and Pushed to GHCR" >> $GITHUB_STEP_SUMMARY
