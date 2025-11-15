@@ -79,43 +79,75 @@ jobs:
           ./mvnw failsafe:integration-test -Dgroups="!bdd" -B
           echo "✅ Integration tests completed"
 
-      - name: Generate Integration Test Coverage Report
+      - name: Complete Integration Tests and Generate Coverage
         run: |
+          ./mvnw failsafe:verify -Djacoco.skip.check=true -B
           ./mvnw jacoco:report-integration -B
           echo "✅ Integration test coverage report generated"
 
+      - name: Backup Integration Coverage
+        run: |
+          # Backup integration-only coverage before BDD tests
+          cp target/jacoco-it.exec target/jacoco-it-only.exec 2>/dev/null || true
+          cp -r target/site/jacoco-it target/site/jacoco-it-only 2>/dev/null || true
+          echo "✅ Integration coverage backed up"
+
       - name: Run BDD Tests with TestContainers
         run: |
+          # Clean previous BDD test results but keep coverage data
+          rm -rf target/failsafe-reports/*Cucumber* 2>/dev/null || true
           ./mvnw failsafe:integration-test -Dtest=CucumberTestRunner -B
           echo "✅ BDD tests completed"
 
-      - name: Verify and Generate Aggregate Coverage
+      - name: Complete BDD Tests and Generate Coverage
         run: |
-          ./mvnw failsafe:verify -Djacoco.skip.check=true -B
+          # Save BDD coverage separately
+          cp target/jacoco-it.exec target/jacoco-bdd.exec 2>/dev/null || true
+          # Generate BDD-specific report
+          ./mvnw jacoco:report-integration -B
+          cp -r target/site/jacoco-it target/site/jacoco-bdd 2>/dev/null || true
+          echo "✅ BDD test coverage report generated"
+
+      - name: Generate Aggregate Coverage Report
+        run: |
+          # Merge all coverage data
+          ./mvnw jacoco:merge@merge-results -B
+          ./mvnw jacoco:report@aggregate-report -Djacoco.skip.check=true -B
           echo "✅ Aggregate coverage report generated"
 
       - name: Create coverage artifacts directory
         run: |
           mkdir -p coverage-reports/unit
           mkdir -p coverage-reports/integration
+          mkdir -p coverage-reports/bdd
           mkdir -p coverage-reports/aggregate
           
           # Copy Unit Test Coverage
           if [ -d "target/site/jacoco" ]; then
             cp -r target/site/jacoco coverage-reports/unit/
             cp target/jacoco.exec coverage-reports/unit/jacoco.exec 2>/dev/null || true
+            echo "✅ Unit test coverage copied"
           fi
           
-          # Copy Integration Test Coverage
-          if [ -d "target/site/jacoco-it" ]; then
-            cp -r target/site/jacoco-it coverage-reports/integration/
-            cp target/jacoco-it.exec coverage-reports/integration/jacoco-it.exec 2>/dev/null || true
+          # Copy Integration Test Coverage (without BDD)
+          if [ -d "target/site/jacoco-it-only" ]; then
+            cp -r target/site/jacoco-it-only coverage-reports/integration/
+            cp target/jacoco-it-only.exec coverage-reports/integration/jacoco-it.exec 2>/dev/null || true
+            echo "✅ Integration test coverage copied"
+          fi
+          
+          # Copy BDD Test Coverage
+          if [ -d "target/site/jacoco-bdd" ]; then
+            cp -r target/site/jacoco-bdd coverage-reports/bdd/
+            cp target/jacoco-bdd.exec coverage-reports/bdd/jacoco-bdd.exec 2>/dev/null || true
+            echo "✅ BDD test coverage copied"
           fi
           
           # Copy Aggregate Coverage
           if [ -d "target/site/jacoco-aggregate" ]; then
             cp -r target/site/jacoco-aggregate coverage-reports/aggregate/
             cp target/jacoco-aggregate.exec coverage-reports/aggregate/jacoco-aggregate.exec 2>/dev/null || true
+            echo "✅ Aggregate coverage copied"
           fi
           
           # Create metadata file
@@ -133,7 +165,8 @@ jobs:
             "test_phases": {
               "unit": "Unit Tests",
               "integration": "Integration Tests (TestContainers)",
-              "bdd": "BDD Tests (Cucumber with TestContainers)"
+              "bdd": "BDD Tests (Cucumber with TestContainers)",
+              "aggregate": "All Tests Combined"
             }
           }
           EOF
@@ -170,7 +203,7 @@ jobs:
               
               echo "📊 ${prefix} Coverage: Instructions: ${inst_pct}% | Branches: ${branch_pct}% | Lines: ${line_pct}%"
             else
-              echo "⚠️ No ${prefix} coverage report found"
+              echo "⚠️ No ${prefix} coverage report found at: $xml_file"
               echo "${prefix}_instruction_coverage=0" >> $GITHUB_OUTPUT
               echo "${prefix}_branch_coverage=0" >> $GITHUB_OUTPUT
               echo "${prefix}_line_coverage=0" >> $GITHUB_OUTPUT
@@ -179,7 +212,8 @@ jobs:
           
           # Extract coverage for each phase
           extract_coverage "target/site/jacoco/jacoco.xml" "unit"
-          extract_coverage "target/site/jacoco-it/jacoco.xml" "integration"
+          extract_coverage "coverage-reports/integration/jacoco-it-only/jacoco.xml" "integration"
+          extract_coverage "coverage-reports/bdd/jacoco-bdd/jacoco.xml" "bdd"
           extract_coverage "target/site/jacoco-aggregate/jacoco.xml" "aggregate"
 
       - name: Upload Coverage Reports
@@ -214,6 +248,11 @@ jobs:
                 instruction: '${{ steps.coverage.outputs.integration_instruction_coverage }}',
                 branch: '${{ steps.coverage.outputs.integration_branch_coverage }}',
                 line: '${{ steps.coverage.outputs.integration_line_coverage }}'
+              },
+              bdd: {
+                instruction: '${{ steps.coverage.outputs.bdd_instruction_coverage }}',
+                branch: '${{ steps.coverage.outputs.bdd_branch_coverage }}',
+                line: '${{ steps.coverage.outputs.bdd_line_coverage }}'
               },
               aggregate: {
                 instruction: '${{ steps.coverage.outputs.aggregate_instruction_coverage }}',
@@ -253,6 +292,13 @@ jobs:
             | Instructions | ${coverage.integration.instruction}% |
             | Branches | ${coverage.integration.branch}% |
             | Lines | ${coverage.integration.line}% |
+            
+            #### 🥒 BDD Tests (Cucumber + TestContainers)
+            | Metric | Coverage |
+            |--------|----------|
+            | Instructions | ${coverage.bdd.instruction}% |
+            | Branches | ${coverage.bdd.branch}% |
+            | Lines | ${coverage.bdd.line}% |
             
             #### 📊 Aggregate Coverage (All Tests)
             | Metric | Coverage |
