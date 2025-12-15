@@ -6,7 +6,7 @@ set -euo pipefail
 # Also triggers Copilot Agent issue to generate tests when missing.
 
 repo_root_dir="$(git rev-parse --show-toplevel)"
-cd "$repo_root_dir/beneficiaries"
+cd "$repo_root_dir"
 
 # Detect staged main Java changes per module
 changed_main=($(git diff --cached --name-only --diff-filter=AMR -- '**/src/main/java/**/*.java'))
