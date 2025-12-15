@@ -6,6 +6,7 @@ import com.alok.payment.beneficiaries.exception.DuplicateBeneficiaryException;
 import com.alok.payment.beneficiaries.model.Beneficiary;
 import com.alok.payment.beneficiaries.repository.BeneficiaryRepository;
 import com.alok.payment.beneficiaries.service.BeneficiaryService;
+import com.alok.payment.beneficiaries.service.BeneficiaryValidationService;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -30,6 +31,9 @@ class BeneficiaryServiceTest {
     
     @Mock
     private BeneficiaryRepository beneficiaryRepository;
+    
+    @Mock
+    private BeneficiaryValidationService validationService;
     
     @InjectMocks
     private BeneficiaryService beneficiaryService;

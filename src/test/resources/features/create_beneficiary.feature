@@ -11,7 +11,7 @@ Feature: Create Beneficiary
       | customerId              | CUST999        |
       | accountNumber           | ACC999         |
       | beneficiaryName         | John Doe       |
-      | beneficiaryAccountNumber| BEN999         |
+      | beneficiaryAccountNumber| 11111111       |
       | beneficiaryBankCode     | BANK001        |
       | beneficiaryBankName     | Test Bank      |
       | beneficiaryType         | DOMESTIC       |
@@ -27,7 +27,7 @@ Feature: Create Beneficiary
       | customerId              | CUST002        |
       | accountNumber           | ACC002         |
       | beneficiaryName         | Jane Smith     |
-      | beneficiaryAccountNumber| IBAN123456     |
+      | beneficiaryAccountNumber| 12345678       |
       | beneficiaryBankCode     | SWIFT001       |
       | beneficiaryBankName     | Global Bank    |
       | beneficiaryType         | INTERNATIONAL  |
@@ -52,7 +52,7 @@ Feature: Create Beneficiary
       | id                      | 5              |
       | customerId              | CUST003        |
       | accountNumber           | ACC003         |
-      | beneficiaryAccountNumber| BEN003         |
+      | beneficiaryAccountNumber| 12341234       |
     When I create a beneficiary with the same details
     Then the response status should be 409
     And the error message should contain "Beneficiary already exists"
