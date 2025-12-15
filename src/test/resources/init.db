@@ -59,5 +59,21 @@ VALUES
 (40, 'CUST005', 'ACC040', 'User Alpha', '33333333', 'BANK009', 'Test Bank 9', 'DOMESTIC', 'ACTIVE', CURRENT_TIMESTAMP, CURRENT_TIMESTAMP),
 (41, 'CUST005', 'ACC041', 'User Beta', '44444444', 'BANK009', 'Test Bank 9', 'INTERNATIONAL', 'ACTIVE', CURRENT_TIMESTAMP, CURRENT_TIMESTAMP);
 
+-- Data for analytics methods testing (CUST_ANALYTICS)
+-- Test data for getCustomerBeneficiaryAnalytics, findPotentialDuplicates, getBeneficiaryUsageReport
+INSERT INTO beneficiaries (id, customer_id, account_number, beneficiary_name, beneficiary_account_number, beneficiary_bank_code, beneficiary_bank_name, beneficiary_type, status, created_at, updated_at)
+VALUES 
+-- Active beneficiaries
+(50, 'CUST_ANALYTICS', 'ACC_ANALYTICS_01', 'John Doe', '111222333', 'BANK010', 'Analytics Bank', 'DOMESTIC', 'ACTIVE', CURRENT_TIMESTAMP - INTERVAL '10 days', CURRENT_TIMESTAMP),
+(51, 'CUST_ANALYTICS', 'ACC_ANALYTICS_02', 'Jane Smith', '222333444', 'BANK010', 'Analytics Bank', 'INTERNATIONAL', 'ACTIVE', CURRENT_TIMESTAMP - INTERVAL '8 days', CURRENT_TIMESTAMP),
+(52, 'CUST_ANALYTICS', 'ACC_ANALYTICS_03', 'Bob Johnson', '333444555', 'BANK011', 'Another Bank', 'DOMESTIC', 'ACTIVE', CURRENT_TIMESTAMP - INTERVAL '5 days', CURRENT_TIMESTAMP),
+-- Inactive beneficiaries
+(53, 'CUST_ANALYTICS', 'ACC_ANALYTICS_04', 'Alice Williams', '444555666', 'BANK011', 'Another Bank', 'DOMESTIC', 'INACTIVE', CURRENT_TIMESTAMP - INTERVAL '20 days', CURRENT_TIMESTAMP),
+(54, 'CUST_ANALYTICS', 'ACC_ANALYTICS_05', 'Charlie Brown', '555666777', 'BANK010', 'Analytics Bank', 'INTERNATIONAL', 'INACTIVE', CURRENT_TIMESTAMP - INTERVAL '15 days', CURRENT_TIMESTAMP),
+-- Similar names for duplicate detection
+(55, 'CUST_ANALYTICS', 'ACC_ANALYTICS_06', 'John Doe', '666777888', 'BANK012', 'Test Bank 12', 'DOMESTIC', 'ACTIVE', CURRENT_TIMESTAMP - INTERVAL '3 days', CURRENT_TIMESTAMP),
+(56, 'CUST_ANALYTICS', 'ACC_ANALYTICS_07', 'JohnDoe', '777888999', 'BANK012', 'Test Bank 12', 'DOMESTIC', 'ACTIVE', CURRENT_TIMESTAMP - INTERVAL '2 days', CURRENT_TIMESTAMP),
+(57, 'CUST_ANALYTICS', 'ACC_ANALYTICS_08', 'Bob Johnston', '888999000', 'BANK011', 'Another Bank', 'INTERNATIONAL', 'ACTIVE', CURRENT_TIMESTAMP - INTERVAL '1 day', CURRENT_TIMESTAMP);
+
 -- Reset sequence to avoid conflicts with test data
 SELECT setval('beneficiaries_id_seq', 100, true);
