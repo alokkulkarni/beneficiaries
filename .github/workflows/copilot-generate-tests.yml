@@ -105,6 +105,7 @@ jobs:
           echo "Applicable slice tests: ${slice_tests}"
 
       - name: Create or update issue to trigger Copilot Coding Agent
+        id: create_issue
         uses: actions/github-script@v7
         with:
           script: |
@@ -200,6 +201,7 @@ jobs:
             });
 
             const existingIssue = issues.find(issue => issue.title === issueTitle);
+            let issueNumber;
 
             if (existingIssue) {
               await github.rest.issues.createComment({
@@ -209,6 +211,7 @@ jobs:
                 body: issueBody
               });
               console.log(`Updated existing issue #${existingIssue.number}`);
+              issueNumber = existingIssue.number;
             } else {
               const { data: newIssue } = await github.rest.issues.create({
                 owner: context.repo.owner,
@@ -218,7 +221,195 @@ jobs:
                 labels: ['copilot-agent', 'tests']
               });
               console.log(`Created new issue #${newIssue.number}`);
+              issueNumber = newIssue.number;
+            }
+            
+            core.setOutput('issue_number', issueNumber);
+
+      - name: Wait for Copilot Agent to create or update PR
+        id: wait_for_pr
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const issueNumber = ${{ steps.create_issue.outputs.issue_number }};
+            const maxAttempts = 60; // Wait up to 30 minutes (30s * 60)
+            const delayMs = 30000; // 30 seconds between checks
+            
+            let attempt = 0;
+            let prFound = false;
+            let prNumber = null;
+            let prBranch = null;
+            
+            console.log(`Waiting for Copilot Agent to respond to issue #${issueNumber}...`);
+            
+            while (attempt < maxAttempts && !prFound) {
+              attempt++;
+              console.log(`Attempt ${attempt}/${maxAttempts}...`);
+              
+              // Check if issue was closed by Copilot without creating a PR
+              const { data: issue } = await github.rest.issues.get({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                issue_number: issueNumber
+              });
+              
+              if (issue.state === 'closed') {
+                console.log('Issue was closed without creating a PR. Agent may have determined no tests were needed.');
+                core.setOutput('pr_created', 'false');
+                core.setOutput('agent_action', 'closed_no_pr');
+                return;
+              }
+              
+              // Check for PRs created by Copilot Agent
+              const { data: prs } = await github.rest.pulls.list({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                state: 'open',
+                sort: 'created',
+                direction: 'desc',
+                per_page: 20
+              });
+              
+              // Look for PR created by copilot-swe-agent that mentions this issue
+              for (const pr of prs) {
+                if (pr.user.login === 'copilot-swe-agent[bot]' || pr.user.type === 'Bot') {
+                  const { data: timeline } = await github.rest.issues.listEventsForTimeline({
+                    owner: context.repo.owner,
+                    repo: context.repo.repo,
+                    issue_number: issueNumber
+                  });
+                  
+                  // Check if this PR is linked to our issue
+                  const prMentionsIssue = timeline.some(event => 
+                    event.event === 'cross-referenced' && 
+                    event.source?.issue?.number === pr.number
+                  );
+                  
+                  if (prMentionsIssue || pr.body?.includes(`#${issueNumber}`)) {
+                    console.log(`Found Copilot PR #${pr.number}: ${pr.title}`);
+                    prFound = true;
+                    prNumber = pr.number;
+                    prBranch = pr.head.ref;
+                    break;
+                  }
+                }
+              }
+              
+              if (!prFound && attempt < maxAttempts) {
+                await new Promise(resolve => setTimeout(resolve, delayMs));
+              }
+            }
+            
+            if (prFound) {
+              console.log(`✅ Copilot created PR #${prNumber} from branch ${prBranch}`);
+              core.setOutput('pr_created', 'true');
+              core.setOutput('pr_number', prNumber);
+              core.setOutput('pr_branch', prBranch);
+              core.setOutput('agent_action', 'created_pr');
+            } else {
+              console.log('⏱️ Timeout: No PR created within the waiting period.');
+              core.setOutput('pr_created', 'false');
+              core.setOutput('agent_action', 'timeout');
             }
 
-      - name: Post summary
-        run: echo "✅ Copilot Agent issue created/updated. The agent will analyze the branch and create a PR with generated tests."
+      - name: Close issue with summary
+        if: always()
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const issueNumber = ${{ steps.create_issue.outputs.issue_number }};
+            const prCreated = '${{ steps.wait_for_pr.outputs.pr_created }}' === 'true';
+            const agentAction = '${{ steps.wait_for_pr.outputs.agent_action }}';
+            const prNumber = '${{ steps.wait_for_pr.outputs.pr_number }}';
+            const prBranch = '${{ steps.wait_for_pr.outputs.pr_branch }}';
+            
+            let summaryComment = '## 🤖 Copilot Agent Workflow Summary\n\n';
+            
+            if (agentAction === 'created_pr') {
+              summaryComment += `✅ **Status**: PR Created Successfully\n\n`;
+              summaryComment += `- **PR**: #${prNumber}\n`;
+              summaryComment += `- **Branch**: \`${prBranch}\`\n`;
+              summaryComment += `- **Next Steps**:\n`;
+              summaryComment += `  1. CI pipeline will run on the PR branch\n`;
+              summaryComment += `  2. Review the generated tests in PR #${prNumber}\n`;
+              summaryComment += `  3. Merge the PR if tests are satisfactory\n\n`;
+              summaryComment += `Closing this issue as the tests have been generated.`;
+            } else if (agentAction === 'closed_no_pr') {
+              summaryComment += `ℹ️ **Status**: No PR Created\n\n`;
+              summaryComment += `The Copilot Agent closed this issue without creating a PR.\n`;
+              summaryComment += `Possible reasons:\n`;
+              summaryComment += `- No test generation was needed\n`;
+              summaryComment += `- Tests already exist for the changed files\n`;
+              summaryComment += `- Agent determined the changes don't require new tests\n`;
+            } else if (agentAction === 'timeout') {
+              summaryComment += `⏱️ **Status**: Timeout\n\n`;
+              summaryComment += `The workflow timed out waiting for Copilot Agent to create a PR.\n`;
+              summaryComment += `Possible reasons:\n`;
+              summaryComment += `- Agent is still processing (check back later)\n`;
+              summaryComment += `- Agent encountered an error\n`;
+              summaryComment += `- Issue was not properly assigned to @copilot\n\n`;
+              summaryComment += `**Action Required**: Check issue status and reassign to @copilot if needed.`;
+            }
+            
+            // Add comment with summary
+            await github.rest.issues.createComment({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: issueNumber,
+              body: summaryComment
+            });
+            
+            // Close issue if PR was created or if agent closed it
+            if (agentAction === 'created_pr' || agentAction === 'closed_no_pr') {
+              await github.rest.issues.update({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                issue_number: issueNumber,
+                state: 'closed',
+                state_reason: 'completed'
+              });
+              console.log(`✅ Issue #${issueNumber} closed with summary`);
+            }
+
+      - name: Trigger CI on agent branch
+        if: steps.wait_for_pr.outputs.pr_created == 'true'
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const prBranch = '${{ steps.wait_for_pr.outputs.pr_branch }}';
+            const prNumber = '${{ steps.wait_for_pr.outputs.pr_number }}';
+            
+            console.log(`Triggering CI workflow on branch: ${prBranch}`);
+            
+            // Trigger the CI workflow on the PR branch
+            await github.rest.actions.createWorkflowDispatch({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              workflow_id: 'ci.yml',
+              ref: prBranch
+            });
+            
+            console.log(`✅ CI workflow triggered for PR #${prNumber}`);
+            
+            // Add comment to PR
+            await github.rest.issues.createComment({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: prNumber,
+              body: '🚀 CI workflow triggered automatically to verify generated tests.'
+            });
+
+      - name: Post workflow summary
+        if: always()
+        run: |
+          echo "## Workflow Completed" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "- **Issue**: #${{ steps.create_issue.outputs.issue_number }}" >> $GITHUB_STEP_SUMMARY
+          echo "- **Agent Action**: ${{ steps.wait_for_pr.outputs.agent_action }}" >> $GITHUB_STEP_SUMMARY
+          if [ "${{ steps.wait_for_pr.outputs.pr_created }}" = "true" ]; then
+            echo "- **PR Created**: #${{ steps.wait_for_pr.outputs.pr_number }}" >> $GITHUB_STEP_SUMMARY
+            echo "- **Branch**: ${{ steps.wait_for_pr.outputs.pr_branch }}" >> $GITHUB_STEP_SUMMARY
+            echo "- **CI Triggered**: ✅" >> $GITHUB_STEP_SUMMARY
+          else
+            echo "- **PR Created**: No" >> $GITHUB_STEP_SUMMARY
+          fi
