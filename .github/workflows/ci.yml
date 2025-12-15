@@ -66,6 +66,10 @@ jobs:
 
       - name: Run Unit Tests
         run: |
+          # Enforce changed-files test presence before running tests (PR context)
+          if [ "${{ github.event_name }}" = "pull_request" ]; then
+            bash scripts/verify-tests.sh "${{ github.event.pull_request.base.sha }}" "${{ github.event.pull_request.head.sha }}" || echo "VERIFY_TESTS_FAILED=1" >> $GITHUB_ENV
+          fi
           ./mvnw clean test -B
           echo "✅ Unit tests completed"
 
@@ -238,6 +242,20 @@ jobs:
         uses: actions/github-script@v7
         with:
           script: |
+            if (process.env.VERIFY_TESTS_FAILED === '1') {
+              const msg = [
+                '❌ Tests missing for changed sources.',
+                '',
+                'This CI enforces that changes under src/main/java/** include corresponding changes under src/test/java/** (unit, slice, integration).',
+                'If the change is non-significant or tests are intentionally unchanged, add the `tests-bypass` label to the PR to proceed.',
+              ].join('\n');
+              await github.rest.issues.createComment({
+                issue_number: context.issue.number,
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                body: msg
+              });
+            }
             const coverage = {
               unit: {
                 instruction: '${{ steps.coverage.outputs.unit_instruction_coverage }}',
@@ -324,6 +342,10 @@ jobs:
 
       - name: Build Application
         run: |
+          if [ "${{ github.event_name }}" = "pull_request" ] && [ "${{ contains(github.event.pull_request.labels.*.name, 'tests-bypass') }}" != "true" ] && [ "${VERIFY_TESTS_FAILED:-0}" = "1" ]; then
+            echo "Failing due to missing tests without bypass label." >&2
+            exit 1
+          fi
           ./mvnw package -DskipTests -B
           echo "✅ Application built successfully"
 
