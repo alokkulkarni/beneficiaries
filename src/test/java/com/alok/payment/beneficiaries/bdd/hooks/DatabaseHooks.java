@@ -26,11 +26,13 @@ public class DatabaseHooks {
         try (var connection = dataSource.getConnection();
              var statement = connection.createStatement()) {
             
-            // Delete all data from beneficiaries table
+            // Delete all data from beneficiaries and audit tables
+            statement.execute("DELETE FROM beneficiary_audits");
             statement.execute("DELETE FROM beneficiaries");
             
-            // Reset the sequence
+            // Reset the sequences
             statement.execute("SELECT setval('beneficiaries_id_seq', 1, false)");
+            statement.execute("SELECT setval('beneficiary_audits_id_seq', 1, false)");
         }
         
         // Re-execute init.db to restore test data
