@@ -50,6 +50,22 @@ public class GlobalExceptionHandler {
         return ResponseEntity.status(HttpStatus.CONFLICT).body(errorResponse);
     }
     
+    @ExceptionHandler(BeneficiaryValidationException.class)
+    public ResponseEntity<ErrorResponse> handleBeneficiaryValidationException(
+            BeneficiaryValidationException ex, WebRequest request) {
+        log.error("Beneficiary validation failed: {}", ex.getMessage());
+        
+        ErrorResponse errorResponse = new ErrorResponse(
+                LocalDateTime.now(),
+                HttpStatus.UNPROCESSABLE_ENTITY.value(),
+                "Validation Failed",
+                ex.getMessage(),
+                request.getDescription(false).replace("uri=", "")
+        );
+        
+        return ResponseEntity.status(HttpStatus.UNPROCESSABLE_ENTITY).body(errorResponse);
+    }
+    
     @ExceptionHandler(MethodArgumentNotValidException.class)
     public ResponseEntity<ErrorResponse> handleValidationExceptions(
             MethodArgumentNotValidException ex, WebRequest request) {

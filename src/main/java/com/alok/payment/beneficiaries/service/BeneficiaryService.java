@@ -19,14 +19,20 @@ public class BeneficiaryService {
     private static final Logger log = LoggerFactory.getLogger(BeneficiaryService.class);
     
     private final BeneficiaryRepository beneficiaryRepository;
+    private final BeneficiaryValidationService validationService;
 
-    public BeneficiaryService(BeneficiaryRepository beneficiaryRepository) {
+    public BeneficiaryService(BeneficiaryRepository beneficiaryRepository,
+                             BeneficiaryValidationService validationService) {
         this.beneficiaryRepository = beneficiaryRepository;
+        this.validationService = validationService;
     }
     
     @Transactional
     public Beneficiary createBeneficiary(BeneficiaryRequest request) {
         log.info("Creating beneficiary for customer: {}", request.getCustomerId());
+        
+        // Validate beneficiary with third-party service
+        validationService.validateBeneficiary(request);
         
         // Check for duplicate beneficiary account number
         beneficiaryRepository.findByCustomerIdAndBeneficiaryAccountNumber(
