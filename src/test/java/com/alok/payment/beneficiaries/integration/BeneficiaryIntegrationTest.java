@@ -88,7 +88,7 @@ class BeneficiaryIntegrationTest {
     @DisplayName("Should create beneficiary successfully")
     void shouldCreateBeneficiarySuccessfully() throws Exception {
         // Given - Use unique IDs to avoid conflict with init.db
-        BeneficiaryRequest request = createRequest("CUST_NEW_001", "ACC_NEW_001", "John Doe", "BEN_NEW_001", 
+        BeneficiaryRequest request = createRequest("CUST_NEW_001", "ACC_NEW_001", "John Doe", "12345678", 
                 "BANK001", "Test Bank", "DOMESTIC");
         
         // When & Then
@@ -110,8 +110,8 @@ class BeneficiaryIntegrationTest {
     @DisplayName("Should return 409 when creating duplicate beneficiary")
     void shouldReturn409WhenCreatingDuplicateBeneficiary() throws Exception {
         // Given
-        BeneficiaryRequest request = createRequest("CUST002", "ACC002", "Jane Doe", "BEN002",
-                "BANK002", "Test Bank 2", "INTERNATIONAL");
+        BeneficiaryRequest request = createRequest("CUST002", "ACC002", "Jane Doe", "23456789",
+                "BANKCODE2", "Test Bank 2", "INTERNATIONAL");
         
         // Create first beneficiary
         mockMvc.perform(post("/api/v1/beneficiaries")
@@ -136,8 +136,8 @@ class BeneficiaryIntegrationTest {
                     "customerId": "CUST003",
                     "accountNumber": "ACC003",
                     "beneficiaryName": "Test User",
-                    "beneficiaryAccountNumber": "BEN003",
-                    "beneficiaryBankCode": "BANK003",
+                    "beneficiaryAccountNumber": "12341234",
+                    "beneficiaryBankCode": "BANKCODE3",
                     "beneficiaryBankName": "Test Bank",
                     "beneficiaryType": "INVALID"
                 }
@@ -154,8 +154,8 @@ class BeneficiaryIntegrationTest {
     @DisplayName("Should update beneficiary successfully")
     void shouldUpdateBeneficiarySuccessfully() throws Exception {
         // Given - Create a beneficiary first
-        BeneficiaryRequest createRequest = createRequest("CUST004", "ACC004", "Original Name", "BEN004",
-                "BANK004", "Original Bank", "DOMESTIC");
+        BeneficiaryRequest createRequest = createRequest("CUST004", "ACC004", "Original Name", "34567890",
+                "BANKCODE4", "Original Bank", "DOMESTIC");
         
         String response = mockMvc.perform(post("/api/v1/beneficiaries")
                         .contentType(MediaType.APPLICATION_JSON)
@@ -168,8 +168,8 @@ class BeneficiaryIntegrationTest {
         BeneficiaryResponse created = objectMapper.readValue(response, BeneficiaryResponse.class);
         
         // When - Update the beneficiary
-        BeneficiaryRequest updateRequest = createRequest("CUST004", "ACC004", "Updated Name", "BEN004",
-                "BANK004", "Updated Bank", "DOMESTIC");
+        BeneficiaryRequest updateRequest = createRequest("CUST004", "ACC004", "Updated Name", "34567890",
+                "BANKCODE4", "Updated Bank", "DOMESTIC");
         
         mockMvc.perform(put("/api/v1/beneficiaries/{id}", created.getId())
                         .param("customerId", "CUST004")
@@ -184,8 +184,8 @@ class BeneficiaryIntegrationTest {
     @DisplayName("Should delete beneficiary successfully")
     void shouldDeleteBeneficiarySuccessfully() throws Exception {
         // Given - Create a beneficiary first
-        BeneficiaryRequest createRequest = createRequest("CUST005", "ACC005", "To Delete", "BEN005",
-                "BANK005", "Test Bank", "DOMESTIC");
+        BeneficiaryRequest createRequest = createRequest("CUST005", "ACC005", "To Delete", "45678901",
+                "BANKCODE5", "Test Bank", "DOMESTIC");
         
         String response = mockMvc.perform(post("/api/v1/beneficiaries")
                         .contentType(MediaType.APPLICATION_JSON)
@@ -212,8 +212,8 @@ class BeneficiaryIntegrationTest {
     @DisplayName("Should get beneficiary by ID")
     void shouldGetBeneficiaryById() throws Exception {
         // Given
-        BeneficiaryRequest createRequest = createRequest("CUST006", "ACC006", "Get By ID Test", "BEN006",
-                "BANK006", "Test Bank", "DOMESTIC");
+        BeneficiaryRequest createRequest = createRequest("CUST006", "ACC006", "Get By ID Test", "56789012",
+                "BANKCODE6", "Test Bank", "DOMESTIC");
         
         String response = mockMvc.perform(post("/api/v1/beneficiaries")
                         .contentType(MediaType.APPLICATION_JSON)
@@ -237,11 +237,11 @@ class BeneficiaryIntegrationTest {
     @DisplayName("Should get all beneficiaries for customer")
     void shouldGetAllBeneficiariesForCustomer() throws Exception {
         // Given - Create multiple beneficiaries with unique customer ID
-        BeneficiaryRequest request1 = createRequest("CUST_NEW_007", "ACC_NEW_007", "Beneficiary 1", "BEN_NEW_007A",
-                "BANK007", "Test Bank", "DOMESTIC");
+        BeneficiaryRequest request1 = createRequest("CUST_NEW_007", "ACC_NEW_007", "Beneficiary 1", "67890123",
+                "BANKCODE7", "Test Bank", "DOMESTIC");
         
-        BeneficiaryRequest request2 = createRequest("CUST_NEW_007", "ACC_NEW_007", "Beneficiary 2", "BEN_NEW_007B",
-                "BANK007", "Test Bank", "INTERNATIONAL");
+        BeneficiaryRequest request2 = createRequest("CUST_NEW_007", "ACC_NEW_007", "Beneficiary 2", "78901234",
+                "BANKCODE7", "Test Bank", "INTERNATIONAL");
         
         mockMvc.perform(post("/api/v1/beneficiaries")
                 .contentType(MediaType.APPLICATION_JSON)
@@ -264,8 +264,8 @@ class BeneficiaryIntegrationTest {
     @DisplayName("Should get beneficiaries by customer and account number")
     void shouldGetBeneficiariesByCustomerAndAccountNumber() throws Exception {
         // Given
-        BeneficiaryRequest request = createRequest("CUST008", "ACC008", "Account Filter Test", "BEN008",
-                "BANK008", "Test Bank", "DOMESTIC");
+        BeneficiaryRequest request = createRequest("CUST008", "ACC008", "Account Filter Test", "89012345",
+                "BANKCODE8", "Test Bank", "DOMESTIC");
         
         mockMvc.perform(post("/api/v1/beneficiaries")
                 .contentType(MediaType.APPLICATION_JSON)
@@ -285,8 +285,8 @@ class BeneficiaryIntegrationTest {
     @DisplayName("Should enforce unique constraint on customer, beneficiary account, and status")
     void shouldEnforceUniqueConstraint() throws Exception {
         // Given
-        BeneficiaryRequest request = createRequest("CUST009", "ACC009", "Constraint Test", "BEN009",
-                "BANK009", "Test Bank", "DOMESTIC");
+        BeneficiaryRequest request = createRequest("CUST009", "ACC009", "Constraint Test", "90123456",
+                "BANKCODE9", "Test Bank", "DOMESTIC");
         
         // Create beneficiary
         String response = mockMvc.perform(post("/api/v1/beneficiaries")
@@ -326,8 +326,8 @@ class BeneficiaryIntegrationTest {
     @DisplayName("Should return 404 when updating non-existent beneficiary")
     void shouldReturn404WhenUpdatingNonExistentBeneficiary() throws Exception {
         // Given
-        BeneficiaryRequest updateRequest = createRequest("CUST001", "ACC001", "Update Test", "BEN999",
-                "BANK001", "Test Bank", "DOMESTIC");
+        BeneficiaryRequest updateRequest = createRequest("CUST001", "ACC001", "Update Test", "11111111",
+                "BANKCODE1", "Test Bank", "DOMESTIC");
         
         // When & Then
         mockMvc.perform(put("/api/v1/beneficiaries/{id}", 99999)
@@ -362,8 +362,8 @@ class BeneficiaryIntegrationTest {
     @DisplayName("Should return 404 when updating beneficiary of different customer")
     void shouldReturn404WhenUpdatingBeneficiaryOfDifferentCustomer() throws Exception {
         // Given - ID 1 belongs to CUST001 (from init.db)
-        BeneficiaryRequest updateRequest = createRequest("WRONG_CUSTOMER", "ACC999", "Hacker", "BEN999",
-                "BANK999", "Test Bank", "DOMESTIC");
+        BeneficiaryRequest updateRequest = createRequest("WRONG_CUSTOMER", "ACC999", "Hacker", "22222222",
+                "BANKCODE99", "Test Bank", "DOMESTIC");
         
         // When & Then
         // Service returns 404 (not found) rather than 403 (forbidden) for security reasons
@@ -389,9 +389,9 @@ class BeneficiaryIntegrationTest {
     @Test
     @DisplayName("Should return 409 when creating duplicate with pre-existing data")
     void shouldReturn409WhenCreatingDuplicateWithPreExistingData() throws Exception {
-        // Given - CUST003 already has BEN003 (from init.db - ID 5)
-        BeneficiaryRequest request = createRequest("CUST003", "ACC003", "Duplicate Test", "BEN003",
-                "BANK004", "Test Bank", "DOMESTIC");
+        // Given - CUST003 already has 12341234 (from init.db - ID 5)
+        BeneficiaryRequest request = createRequest("CUST003", "ACC003", "Duplicate Test", "12341234",
+                "BANKCODE4", "Test Bank", "DOMESTIC");
         
         // When & Then
         mockMvc.perform(post("/api/v1/beneficiaries")
@@ -408,7 +408,7 @@ class BeneficiaryIntegrationTest {
                 {
                     "customerId": "CUST010",
                     "accountNumber": "ACC010",
-                    "beneficiaryAccountNumber": "BEN010",
+                    "beneficiaryAccountNumber": "10101010",
                     "beneficiaryBankCode": "BANK010",
                     "beneficiaryBankName": "Test Bank",
                     "beneficiaryType": "DOMESTIC"
@@ -426,7 +426,7 @@ class BeneficiaryIntegrationTest {
     @DisplayName("Should return 400 for invalid bank code format")
     void shouldReturn400ForInvalidBankCodeFormat() throws Exception {
         // Given
-        BeneficiaryRequest request = createRequest("CUST010", "ACC010", "Invalid Bank Code", "BEN010",
+        BeneficiaryRequest request = createRequest("CUST010", "ACC010", "Invalid Bank Code", "10101010",
                 "", "Test Bank", "DOMESTIC");  // Empty bank code
         
         // When & Then
@@ -456,9 +456,9 @@ class BeneficiaryIntegrationTest {
                         .param("customerId", "CUST002"))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.length()").value(3))
-                .andExpect(jsonPath("$[?(@.beneficiaryAccountNumber=='BEN010')]").exists())
-                .andExpect(jsonPath("$[?(@.beneficiaryAccountNumber=='BEN011')]").exists())
-                .andExpect(jsonPath("$[?(@.beneficiaryAccountNumber=='BEN012')]").exists());
+                .andExpect(jsonPath("$[?(@.beneficiaryAccountNumber=='56789012')]").exists())
+                .andExpect(jsonPath("$[?(@.beneficiaryAccountNumber=='67890123')]").exists())
+                .andExpect(jsonPath("$[?(@.beneficiaryAccountNumber=='78901234')]").exists());
     }
     
     @Test
@@ -480,8 +480,8 @@ class BeneficiaryIntegrationTest {
     @DisplayName("Should update existing beneficiary from init.db")
     void shouldUpdateExistingBeneficiaryFromInitDb() throws Exception {
         // Given - ID 1 exists with "Old Name" (from init.db)
-        BeneficiaryRequest updateRequest = createRequest("CUST001", "ACC001", "Updated Name", "BEN001",
-                "BANK001", "Updated Bank", "DOMESTIC");
+        BeneficiaryRequest updateRequest = createRequest("CUST001", "ACC001", "Updated Name", "12345678",
+                "BANKCODE1", "Updated Bank", "DOMESTIC");
         
         // When
         mockMvc.perform(put("/api/v1/beneficiaries/{id}", 1)
