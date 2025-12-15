@@ -30,10 +30,8 @@ class BeneficiaryAuditServiceTest {
     @Mock
     private BeneficiaryAuditRepository auditRepository;
     
-    @Spy
     private ObjectMapper objectMapper = new ObjectMapper();
     
-    @InjectMocks
     private BeneficiaryAuditService auditService;
     
     private Beneficiary beneficiary;
@@ -41,6 +39,9 @@ class BeneficiaryAuditServiceTest {
     
     @BeforeEach
     void setUp() {
+        objectMapper.findAndRegisterModules(); // Register JavaTimeModule for LocalDateTime
+        auditService = new BeneficiaryAuditService(auditRepository, objectMapper);
+        
         beneficiary = new Beneficiary();
         beneficiary.setId(1L);
         beneficiary.setCustomerId("CUST001");

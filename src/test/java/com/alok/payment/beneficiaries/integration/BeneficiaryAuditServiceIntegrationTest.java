@@ -212,7 +212,7 @@ class BeneficiaryAuditServiceIntegrationTest {
     
     @Test
     @DisplayName("Should handle multiple audit operations in sequence")
-    void shouldHandleMultipleAuditOperationsInSequence() {
+    void shouldHandleMultipleAuditOperationsInSequence() throws InterruptedException {
         // Given
         Beneficiary beneficiary = createTestBeneficiary(9L, "CUST008", "Frank Miller");
         
