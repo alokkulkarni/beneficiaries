@@ -68,7 +68,7 @@ public class BeneficiaryAuditService {
         audit.setBeneficiaryId(beneficiaryId);
         audit.setCustomerId(customerId);
         audit.setOperation("DELETE");
-        audit.setChanges(String.format("{\"beneficiaryId\":%d,\"customerId\":\"%s\"}", beneficiaryId, customerId));
+        audit.setChanges(serializeDeleteInfo(beneficiaryId, customerId));
         audit.setPerformedBy(performedBy != null ? performedBy : "SYSTEM");
         audit.setPerformedAt(LocalDateTime.now());
         
@@ -94,6 +94,20 @@ public class BeneficiaryAuditService {
             return objectMapper.writeValueAsString(beneficiary);
         } catch (JsonProcessingException e) {
             log.error("Error serializing beneficiary", e);
+            return "{}";
+        }
+    }
+    
+    private String serializeDeleteInfo(Long beneficiaryId, String customerId) {
+        try {
+            return objectMapper.writeValueAsString(
+                new java.util.HashMap<String, Object>() {{
+                    put("beneficiaryId", beneficiaryId);
+                    put("customerId", customerId);
+                }}
+            );
+        } catch (JsonProcessingException e) {
+            log.error("Error serializing delete info", e);
             return "{}";
         }
     }
