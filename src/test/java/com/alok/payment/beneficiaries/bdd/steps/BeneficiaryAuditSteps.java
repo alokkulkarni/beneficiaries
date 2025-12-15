@@ -1,6 +1,5 @@
 package com.alok.payment.beneficiaries.bdd.steps;
 
-import com.alok.payment.beneficiaries.bdd.context.TestContext;
 import com.alok.payment.beneficiaries.model.Beneficiary;
 import com.alok.payment.beneficiaries.model.BeneficiaryAudit;
 import com.alok.payment.beneficiaries.service.BeneficiaryAuditService;
@@ -16,9 +15,6 @@ import java.util.List;
 import static org.assertj.core.api.Assertions.assertThat;
 
 public class BeneficiaryAuditSteps {
-    
-    @Autowired
-    private TestContext testContext;
     
     @Autowired
     private BeneficiaryAuditService auditService;

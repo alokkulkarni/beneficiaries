@@ -100,12 +100,10 @@ public class BeneficiaryAuditService {
     
     private String serializeDeleteInfo(Long beneficiaryId, String customerId) {
         try {
-            return objectMapper.writeValueAsString(
-                new java.util.HashMap<String, Object>() {{
-                    put("beneficiaryId", beneficiaryId);
-                    put("customerId", customerId);
-                }}
-            );
+            java.util.Map<String, Object> deleteInfo = new java.util.HashMap<>();
+            deleteInfo.put("beneficiaryId", beneficiaryId);
+            deleteInfo.put("customerId", customerId);
+            return objectMapper.writeValueAsString(deleteInfo);
         } catch (JsonProcessingException e) {
             log.error("Error serializing delete info", e);
             return "{}";
