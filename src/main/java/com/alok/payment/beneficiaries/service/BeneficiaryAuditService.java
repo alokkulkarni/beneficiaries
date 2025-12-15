@@ -11,7 +11,9 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDateTime;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 
 @Service
 public class BeneficiaryAuditService {
@@ -100,7 +102,7 @@ public class BeneficiaryAuditService {
     
     private String serializeDeleteInfo(Long beneficiaryId, String customerId) {
         try {
-            java.util.Map<String, Object> deleteInfo = new java.util.HashMap<>();
+            Map<String, Object> deleteInfo = new HashMap<>();
             deleteInfo.put("beneficiaryId", beneficiaryId);
             deleteInfo.put("customerId", customerId);
             return objectMapper.writeValueAsString(deleteInfo);
