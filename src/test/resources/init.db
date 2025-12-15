@@ -66,10 +66,10 @@ SELECT setval('beneficiaries_id_seq', 100, true);
 CREATE TABLE IF NOT EXISTS beneficiary_audits (
     id BIGSERIAL PRIMARY KEY,
     beneficiary_id BIGINT NOT NULL,
-    customer_id VARCHAR(255) NOT NULL,
-    operation VARCHAR(50) NOT NULL,
+    customer_id VARCHAR(50) NOT NULL,
+    operation VARCHAR(20) NOT NULL,
     changes TEXT,
-    performed_by VARCHAR(255) NOT NULL,
+    performed_by VARCHAR(50) NOT NULL,
     performed_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 
