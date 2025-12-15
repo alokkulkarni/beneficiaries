@@ -71,14 +71,15 @@ EOF
     issue_body+="$m"
   done
   issue_body+=$'\n\nPrefer existing frameworks in repo (JUnit 5, Spring Boot Test, Mockito, Cucumber, Testcontainers); otherwise use standard stacks.\n'
-  issue_body+=$"\nBranch: ${branch_name}\nRepository: beneficiaries\n\n#github-pull-request_copilot-coding-agent\n"
+  issue_body+=$"\nBranch: ${branch_name}\nRepository: beneficiaries\n"
 
   if command -v gh >/dev/null 2>&1; then
     existing_id=$(gh issue list --search "$issue_title" --state open --json number --jq '.[0].number' 2>/dev/null || true)
     if [[ -n "$existing_id" ]]; then
       gh issue comment "$existing_id" --body "$issue_body" || true
+      gh issue edit "$existing_id" --add-assignee @copilot || true
     else
-      gh issue create --title "$issue_title" --body "$issue_body" || true
+      gh issue create --title "$issue_title" --body "$issue_body" --assignee @copilot || true
     fi
   fi
 
