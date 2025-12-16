@@ -170,33 +170,33 @@ jobs:
           BRANCH_NAME: ${{ steps.parse_branch.outputs.branch }}
         with:
           script: |
-            const fs = require('fs');
-            const branch = process.env.BRANCH_NAME;
-            const changedFilesRaw = process.env.CHANGED_FILES || '';
-            const changedFiles = changedFilesRaw.trim() ? changedFilesRaw.trim().split('\n').map(f => '- ' + f.trim()).join('\n') : '';
-            const frameworksHint = process.env.FRAMEWORKS_HINT || process.env.ANALYZED_FRAMEWORKS || '';
-            const dependencies = process.env.DEPENDENCIES || '';
-            const issueTitle = 'Generate tests for branch ' + branch + ' (beneficiaries)';
-            
-            // Build issue body using concatenation to avoid template literal issues
-            let issueBody = 'Please analyze the beneficiaries repo on branch \'' + branch + '\' and generate tests for changed Java sources.\n\n';
-            issueBody += '**Context:**\n';
-            issueBody += '- Branch: ' + branch + '\n';
-            issueBody += '- Changed files:\n' + (changedFiles || 'Analyze all recent changes on branch') + '\n';
-            issueBody += '- Existing test frameworks detected: ' + (frameworksHint || 'None detected') + '\n';
-            issueBody += '- Dependencies found in pom.xml: ' + (dependencies || 'None detected') + '\n\n';
-            issueBody += '#github-pull-request_copilot-coding-agent';
+            try {
+              const branch = (process.env.BRANCH_NAME || 'main').trim();
+              const changedFilesRaw = (process.env.CHANGED_FILES || '').trim();
+              const changedFiles = changedFilesRaw ? changedFilesRaw.split('\n').map(f => '- ' + f.trim()).join('\n') : '';
+              const frameworksHint = (process.env.FRAMEWORKS_HINT || process.env.ANALYZED_FRAMEWORKS || '').trim();
+              const dependencies = (process.env.DEPENDENCIES || '').trim();
+              
+              const issueTitle = 'Generate tests for branch ' + branch + ' (beneficiaries)';
+              
+              let issueBody = 'Please analyze the beneficiaries repo on branch ' + branch + ' and generate tests for changed Java sources.\n\n';
+              issueBody += '**Context:**\n';
+              issueBody += '- Branch: ' + branch + '\n';
+              issueBody += '- Changed files:\n' + (changedFiles || 'Analyze all recent changes on branch') + '\n';
+              issueBody += '- Existing test frameworks detected: ' + (frameworksHint || 'None detected') + '\n';
+              issueBody += '- Dependencies found in pom.xml: ' + (dependencies || 'None detected') + '\n\n';
+              issueBody += '#github-pull-request_copilot-coding-agent';
 
-            // Check for existing open issue
-            const { data: issues } = await github.rest.issues.listForRepo({
-              owner: context.repo.owner,
-              repo: context.repo.repo,
-              state: 'open',
-              labels: 'copilot-agent,tests'
-            });
+              // Check for existing open issue
+              const { data: issues } = await github.rest.issues.listForRepo({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                state: 'open',
+                labels: 'copilot-agent,tests'
+              });
 
-            const existingIssue = issues.find(issue => issue.title === issueTitle);
-            let issueNumber;
+              const existingIssue = issues.find(issue => issue.title === issueTitle);
+              let issueNumber;
 
             if (existingIssue) {
               await github.rest.issues.createComment({
@@ -220,6 +220,10 @@ jobs:
             }
             
             core.setOutput('issue_number', issueNumber);
+            } catch (error) {
+              console.error('Error creating issue:', error);
+              throw error;
+            }
 
       - name: Wait for Copilot Agent to create or update PR
         if: steps.parse_branch.outputs.should_skip == 'false'
