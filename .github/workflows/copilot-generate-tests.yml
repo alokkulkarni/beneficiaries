@@ -219,6 +219,19 @@ jobs:
               issueNumber = newIssue.number;
             }
             
+            // Assign @copilot to the issue
+            try {
+              await github.rest.issues.addAssignees({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                issue_number: issueNumber,
+                assignees: ['copilot']
+              });
+              console.log(`Assigned @copilot to issue #${issueNumber}`);
+            } catch (assignError) {
+              console.warn(`Could not assign @copilot to issue #${issueNumber}:`, assignError.message);
+            }
+            
             core.setOutput('issue_number', issueNumber);
             } catch (error) {
               console.error('Error creating issue:', error);
