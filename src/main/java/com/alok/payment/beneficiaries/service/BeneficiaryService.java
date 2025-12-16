@@ -1,6 +1,8 @@
 package com.alok.payment.beneficiaries.service;
 
 import com.alok.payment.beneficiaries.dto.BeneficiaryRequest;
+import com.alok.payment.beneficiaries.dto.BeneficiarySearchCriteria;
+import com.alok.payment.beneficiaries.dto.PagedResponse;
 import com.alok.payment.beneficiaries.exception.BeneficiaryNotFoundException;
 import com.alok.payment.beneficiaries.exception.DuplicateBeneficiaryException;
 import com.alok.payment.beneficiaries.model.Beneficiary;
@@ -138,6 +140,47 @@ public class BeneficiaryService {
         } else {
             return beneficiaryRepository.findByCustomerId(customerId);
         }
+    }
+    
+    /**
+     * NEW: Search beneficiaries with advanced filtering and pagination
+     */
+    @Transactional(readOnly = true)
+    public PagedResponse<Beneficiary> searchBeneficiaries(BeneficiarySearchCriteria criteria) {
+        log.info("Searching beneficiaries with criteria - customer: {}, name: {}, type: {}, status: {}", 
+                criteria.getCustomerId(), criteria.getBeneficiaryName(), 
+                criteria.getBeneficiaryType(), criteria.getStatus());
+        
+        int limit = criteria.getSize();
+        int offset = criteria.getPage() * criteria.getSize();
+        
+        List<Beneficiary> results = beneficiaryRepository.searchBeneficiaries(
+                criteria.getCustomerId(),
+                criteria.getBeneficiaryName(),
+                criteria.getBeneficiaryType(),
+                criteria.getStatus(),
+                criteria.getBeneficiaryBankCode(),
+                criteria.getCreatedAfter(),
+                criteria.getCreatedBefore(),
+                criteria.getSortBy(),
+                criteria.getSortDirection(),
+                limit,
+                offset
+        );
+        
+        long totalCount = beneficiaryRepository.countBeneficiaries(
+                criteria.getCustomerId(),
+                criteria.getBeneficiaryName(),
+                criteria.getBeneficiaryType(),
+                criteria.getStatus(),
+                criteria.getBeneficiaryBankCode(),
+                criteria.getCreatedAfter(),
+                criteria.getCreatedBefore()
+        );
+        
+        log.info("Search returned {} results out of {} total", results.size(), totalCount);
+        
+        return new PagedResponse<>(results, criteria.getPage(), criteria.getSize(), totalCount);
     }
     
     /**

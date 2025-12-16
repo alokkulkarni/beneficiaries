@@ -42,23 +42,36 @@ jobs:
               }
               
               const issueBody = context.payload.issue.body || '';
-              const branchMatch = issueBody.match(/Branch:\s*([^\n\s]+)/);
+              const issueTitle = context.payload.issue.title || '';
+              
+              // Try to extract branch from issue body first (most reliable)
+              let branchMatch = issueBody.match(/Branch:\s*([^\n\s]+)/);
               if (branchMatch) {
                 branch = branchMatch[1];
+                console.log(`Branch extracted from issue body: ${branch}`);
               } else {
-                console.log('Could not parse branch from issue body, defaulting to main');
-                branch = 'main';
+                // Fallback: try to extract from issue title
+                // Format: "Generate tests for branch {branch_name} (repo)"
+                const titleMatch = issueTitle.match(/Generate tests for branch\s+([^\s\(]+)/);
+                if (titleMatch) {
+                  branch = titleMatch[1];
+                  console.log(`Branch extracted from issue title: ${branch}`);
+                } else {
+                  console.log('Could not parse branch from issue body or title, defaulting to main');
+                  branch = 'main';
+                }
               }
               
-              const filesSection = issueBody.match(/Changed files:[\s\S]*?(?=\n\n|$)/);
+              // Extract changed files from issue body
+              const filesSection = issueBody.match(/Changed files:[\s\S]*?(?=\n\n|Prefer|Branch:|$)/);
               if (filesSection) {
-                const fileMatches = filesSection[0].matchAll(/- (.+\.java)/g);
-                changedFiles = Array.from(fileMatches, m => m[1]).join('\n');
+                const fileMatches = filesSection[0].matchAll(/[-•]\s*(.+\.java)/g);
+                changedFiles = Array.from(fileMatches, m => m[1].trim()).join('\n');
               }
             }
             
-            console.log(`Branch: ${branch}`);
-            console.log(`Changed files: ${changedFiles}`);
+            console.log(`Final Branch: ${branch}`);
+            console.log(`Changed files:\n${changedFiles}`);
             core.setOutput('branch', branch);
             core.setOutput('changed_files', changedFiles);
             core.setOutput('frameworks_hint', frameworksHint);
@@ -358,7 +371,7 @@ jobs:
         uses: actions/github-script@v7
         with:
           script: |
-            const issueNumber = ${{ steps.create_issue.outputs.issue_number }};
+            const issueNumber = parseInt('${{ steps.create_issue.outputs.issue_number }}');
             const maxAttempts = 60; // Wait up to 30 minutes (30s * 60)
             const delayMs = 30000; // 30 seconds between checks
             
@@ -444,7 +457,7 @@ jobs:
         uses: actions/github-script@v7
         with:
           script: |
-            const issueNumber = ${{ steps.create_issue.outputs.issue_number }};
+            const issueNumber = parseInt('${{ steps.create_issue.outputs.issue_number }}');
             const prCreated = '${{ steps.wait_for_pr.outputs.pr_created }}' === 'true';
             const agentAction = '${{ steps.wait_for_pr.outputs.agent_action }}';
             const prNumber = '${{ steps.wait_for_pr.outputs.pr_number }}';

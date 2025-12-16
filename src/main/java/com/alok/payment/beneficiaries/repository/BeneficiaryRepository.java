@@ -42,4 +42,48 @@ public interface BeneficiaryRepository extends CrudRepository<Beneficiary, Long>
     @Modifying
     @Query("DELETE FROM beneficiaries")
     void deleteAll();
+    
+    @Query("SELECT * FROM beneficiaries WHERE " +
+           "(:customerId IS NULL OR customer_id = :customerId) " +
+           "AND (:beneficiaryName IS NULL OR LOWER(beneficiary_name) LIKE LOWER(CONCAT('%', :beneficiaryName, '%'))) " +
+           "AND (:beneficiaryType IS NULL OR beneficiary_type = :beneficiaryType) " +
+           "AND (:status IS NULL OR status = :status) " +
+           "AND (:beneficiaryBankCode IS NULL OR beneficiary_bank_code = :beneficiaryBankCode) " +
+           "AND (:createdAfter IS NULL OR created_at >= :createdAfter) " +
+           "AND (:createdBefore IS NULL OR created_at <= :createdBefore) " +
+           "ORDER BY " +
+           "CASE WHEN :sortBy = 'createdAt' AND :sortDirection = 'ASC' THEN created_at END ASC, " +
+           "CASE WHEN :sortBy = 'createdAt' AND :sortDirection = 'DESC' THEN created_at END DESC, " +
+           "CASE WHEN :sortBy = 'beneficiaryName' AND :sortDirection = 'ASC' THEN beneficiary_name END ASC, " +
+           "CASE WHEN :sortBy = 'beneficiaryName' AND :sortDirection = 'DESC' THEN beneficiary_name END DESC " +
+           "LIMIT :limit OFFSET :offset")
+    List<Beneficiary> searchBeneficiaries(
+            @Param("customerId") String customerId,
+            @Param("beneficiaryName") String beneficiaryName,
+            @Param("beneficiaryType") String beneficiaryType,
+            @Param("status") String status,
+            @Param("beneficiaryBankCode") String beneficiaryBankCode,
+            @Param("createdAfter") java.time.LocalDateTime createdAfter,
+            @Param("createdBefore") java.time.LocalDateTime createdBefore,
+            @Param("sortBy") String sortBy,
+            @Param("sortDirection") String sortDirection,
+            @Param("limit") int limit,
+            @Param("offset") int offset);
+    
+    @Query("SELECT COUNT(*) FROM beneficiaries WHERE " +
+           "(:customerId IS NULL OR customer_id = :customerId) " +
+           "AND (:beneficiaryName IS NULL OR LOWER(beneficiary_name) LIKE LOWER(CONCAT('%', :beneficiaryName, '%'))) " +
+           "AND (:beneficiaryType IS NULL OR beneficiary_type = :beneficiaryType) " +
+           "AND (:status IS NULL OR status = :status) " +
+           "AND (:beneficiaryBankCode IS NULL OR beneficiary_bank_code = :beneficiaryBankCode) " +
+           "AND (:createdAfter IS NULL OR created_at >= :createdAfter) " +
+           "AND (:createdBefore IS NULL OR created_at <= :createdBefore)")
+    long countBeneficiaries(
+            @Param("customerId") String customerId,
+            @Param("beneficiaryName") String beneficiaryName,
+            @Param("beneficiaryType") String beneficiaryType,
+            @Param("status") String status,
+            @Param("beneficiaryBankCode") String beneficiaryBankCode,
+            @Param("createdAfter") java.time.LocalDateTime createdAfter,
+            @Param("createdBefore") java.time.LocalDateTime createdBefore);
 }

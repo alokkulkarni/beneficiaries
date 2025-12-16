@@ -2,16 +2,21 @@ package com.alok.payment.beneficiaries.controller;
 
 import com.alok.payment.beneficiaries.dto.BeneficiaryRequest;
 import com.alok.payment.beneficiaries.dto.BeneficiaryResponse;
+import com.alok.payment.beneficiaries.dto.BeneficiarySearchCriteria;
+import com.alok.payment.beneficiaries.dto.PagedResponse;
 import com.alok.payment.beneficiaries.model.Beneficiary;
 import com.alok.payment.beneficiaries.service.BeneficiaryService;
 import jakarta.validation.Valid;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.format.annotation.DateTimeFormat;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
+import java.time.LocalDateTime;
 import java.util.List;
+import java.util.Map;
 import java.util.stream.Collectors;
 
 @RestController
@@ -81,4 +86,55 @@ public class BeneficiaryController {
         
         return ResponseEntity.ok(responses);
     }
-}
+    
+    @PostMapping("/search")
+    public ResponseEntity<PagedResponse<BeneficiaryResponse>> searchBeneficiaries(
+            @RequestBody BeneficiarySearchCriteria criteria) {
+        log.info("REST request to search beneficiaries with criteria");
+        
+        PagedResponse<Beneficiary> pagedResult = beneficiaryService.searchBeneficiaries(criteria);
+        
+        List<BeneficiaryResponse> responses = pagedResult.getContent().stream()
+                .map(BeneficiaryResponse::from)
+                .collect(Collectors.toList());
+        
+        PagedResponse<BeneficiaryResponse> response = new PagedResponse<>(
+                responses,
+                pagedResult.getPage(),
+                pagedResult.getSize(),
+                pagedResult.getTotalElements()
+        );
+        
+        return ResponseEntity.ok(response);
+    }
+    
+    @GetMapping("/analytics")
+    public ResponseEntity<Map<String, Object>> getBeneficiaryAnalytics(
+            @RequestParam String customerId) {
+        log.info("REST request to get beneficiary analytics for customer: {}", customerId);
+        
+        Map<String, Object> analytics = beneficiaryService.getCustomerBeneficiaryAnalytics(customerId);
+        return ResponseEntity.ok(analytics);
+    }
+    
+    @GetMapping("/duplicates")
+    public ResponseEntity<List<Map<String, Object>>> findPotentialDuplicates(
+            @RequestParam String customerId) {
+        log.info("REST request to find potential duplicate beneficiaries for customer: {}", customerId);
+        
+        List<Map<String, Object>> duplicates = beneficiaryService.findPotentialDuplicates(customerId);
+        return ResponseEntity.ok(duplicates);
+    }
+    
+    @GetMapping("/usage-report")
+    public ResponseEntity<Map<String, Object>> getUsageReport(
+            @RequestParam String customerId,
+            @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) LocalDateTime startDate,
+            @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) LocalDateTime endDate) {
+        log.info("REST request to get usage report for customer: {} from {} to {}", 
+                customerId, startDate, endDate);
+        
+        Map<String, Object> report = beneficiaryService.getBeneficiaryUsageReport(
+                customerId, startDate, endDate);
+        return ResponseEntity.ok(report);
+    }}
