@@ -165,176 +165,27 @@ jobs:
         env:
           CHANGED_FILES: ${{ steps.parse_branch.outputs.changed_files }}
           FRAMEWORKS_HINT: ${{ steps.parse_branch.outputs.frameworks_hint }}
-          DEPENDENCIES: ${{ steps.analyze.outputs.frameworks }}
+          ANALYZED_FRAMEWORKS: ${{ steps.analyze.outputs.frameworks }}
+          DEPENDENCIES: ${{ steps.analyze.outputs.dependencies }}
+          BRANCH_NAME: ${{ steps.parse_branch.outputs.branch }}
         with:
           script: |
-            const branch = '${{ steps.parse_branch.outputs.branch }}';
+            const fs = require('fs');
+            const branch = process.env.BRANCH_NAME;
             const changedFilesRaw = process.env.CHANGED_FILES || '';
-            const changedFiles = changedFilesRaw.trim() ? changedFilesRaw.trim().split('\n').map(f => `- ${f.trim()}`).join('\n') : '';
-            const frameworksHint = process.env.FRAMEWORKS_HINT || process.env.DEPENDENCIES || '';
-            const dependencies = '${{ steps.analyze.outputs.dependencies }}';
-            const issueTitle = `Generate tests for branch ${branch} (beneficiaries)`;
+            const changedFiles = changedFilesRaw.trim() ? changedFilesRaw.trim().split('\n').map(f => '- ' + f.trim()).join('\n') : '';
+            const frameworksHint = process.env.FRAMEWORKS_HINT || process.env.ANALYZED_FRAMEWORKS || '';
+            const dependencies = process.env.DEPENDENCIES || '';
+            const issueTitle = 'Generate tests for branch ' + branch + ' (beneficiaries)';
             
-            const issueBody = `Please analyze the beneficiaries repo on branch '${branch}' and generate tests for changed Java sources.
-
-            **Context:**
-            - Branch: ${branch}
-            - Changed files:
-            ${changedFiles || 'Analyze all recent changes on branch'}
-            - Existing test frameworks detected: ${frameworksHint || 'None detected'}
-            - Dependencies found in pom.xml: ${dependencies || 'None detected'}
-
-            **CRITICAL - Branch Context:**
-            - This workflow is running on branch '${branch}'
-            - ALL code changes in this branch MUST be included in generated tests
-            - Copilot MUST create PR branch FROM '${branch}', NOT from 'main'
-            - This ensures all fixes and changes from the source branch are preserved
-
-            **Requirements:**
-            1. **Validate dependencies first**: Inspect pom.xml to confirm which Spring/testing dependencies are present before generating tests.
-            2. **Use existing frameworks**: Prefer test frameworks already in use: ${frameworksHint || 'JUnit 5, Mockito, Spring Boot Test (defaults)'}.
-            3. **Generate appropriate test types**:
-               - **Unit tests**: Always generate for changed classes using JUnit 5 + Mockito for mocking.
-               - **Integration tests**: 
-                 - **MANDATORY**: MUST use Testcontainers for all integration tests
-                 - **DO NOT** use TestRestTemplate, @SpringBootTest without containers, or in-memory databases
-                 - **REQUIRED**: Use real containers (PostgreSQL, MySQL, MongoDB, Redis, Kafka, RabbitMQ, etc.)
-                 - Testcontainers configuration is already available in src/test/resources/application-test.yml
-                 - Example: Use @Testcontainers, @Container PostgreSQLContainer for database integration tests
-                 - **MUST** update src/test/resources/init.db (or equivalent schema file) with test data needed for new tests
-               - **BDD tests**: 
-                 - **MANDATORY**: MUST use Testcontainers for all BDD/Cucumber scenarios
-                 - **DO NOT** use TestRestTemplate or mock services in BDD tests
-                 - BDD tests MUST run against real containers to validate end-to-end behavior
-                 - Use Cucumber with Testcontainers integration
-                 - **MUST** update src/test/resources/init.db with test data for BDD scenarios
-            4. **Edge case coverage**: Include comprehensive test scenarios covering:
-               - Null/empty inputs and boundary conditions
-               - Error conditions and exception handling
-               - Concurrent access scenarios (if applicable)
-               - Invalid state transitions
-               - Resource exhaustion and timeout scenarios
-               - Security edge cases (unauthorized access, invalid tokens, etc.)
-            5. **CRITICAL - Coverage Verification (MANDATORY - NEVER SKIP)**:
-               - **MUST** verify coverage after generating ALL tests
-               - **MUST** run \`./mvnw clean test jacoco:report\` to generate coverage report
-               - **MUST** check JaCoCo XML report at target/site/jacoco/jacoco.xml for actual coverage percentages
-               - **REQUIRED THRESHOLDS** (coverage MUST meet or exceed these):
-                 - Minimum 80% line coverage for ALL changed source files
-                 - Minimum 80% branch coverage for ALL changed source files
-               - **IF coverage is below thresholds**: Generate additional tests to meet requirements
-               - **NEVER** skip coverage verification - this is MANDATORY before finalizing PR
-               - **MUST** include coverage report summary in PR description with actual percentages
-               - Do NOT generate redundant tests that test the same path/scenario
-               - Focus on meaningful tests that validate actual business logic and edge cases
-            6. **Test quality and necessity**:
-               - Do NOT create tests for:
-                 - Simple getters/setters without logic
-                 - Constructors with only field assignments
-                 - DTOs/POJOs with no behavior
-                 - Auto-generated code (Lombok @Data, etc.)
-               - DO create tests for:
-                 - Business logic and calculations
-                 - Validation logic
-                 - State management and workflows
-                 - External integrations and API calls
-                 - Data transformations and mappings
-                 - Security-sensitive operations
-            7. **Default fallbacks** (if no test frameworks detected):
-               - JUnit 5 for unit tests
-               - Mockito for mocking
-               - Spring Boot Test (@SpringBootTest) for integration tests
-               - Testcontainers for container-based integration tests
-               - Cucumber JVM for BDD (optional, add if valuable)
-            8. **Keep changes minimal**: Focus only on test code; do not refactor production code unless absolutely required for testability.
-            9. **Verify coverage**: After generating tests, validate that the coverage thresholds (80% line and branch) are met for all changed source files.
-            10. **CRITICAL - TestContainers for Integration & BDD Tests (STRICTLY ENFORCED)**:
-                - **MANDATORY**: ALL integration and BDD tests MUST ONLY use Testcontainers - NO EXCEPTIONS
-                - **PROHIBITED**: NEVER use TestRestTemplate, @SpringBootTest without containers, H2/in-memory databases, embedded services, or mock HTTP servers
-                - **Container Selection**: 
-                  - Use REAL containers matching production (PostgreSQL, MySQL, MongoDB, Redis, Kafka, RabbitMQ, etc.)
-                  - IF no official Testcontainer exists for an external service: Create a MOCK Testcontainer using GenericContainer with the service's Docker image
-                  - Example mock container: \`GenericContainer.withImage("custom-service:latest").withExposedPorts(8080)\`
-                - **Every Integration/BDD Test MUST**:
-                  - Have @Testcontainers annotation
-                  - Declare @Container fields for ALL external dependencies
-                  - Use @DynamicPropertySource or @ServiceConnection for configuration
-                  - Execute against real containerized services ONLY
-                - **Configuration**: Testcontainers config is in src/test/resources/application-test.yml or TestContainersConfig.java
-                - **Test Data Management**:
-                  - **MUST** update src/test/resources/init.db (or schema.sql/data.sql) with SQL INSERT statements for test data
-                  - Include realistic test data that covers edge cases and scenarios in your tests
-                  - Ensure referential integrity (foreign keys, constraints)
-                  - Use meaningful test data names (e.g., "Test Customer 1", "CUST001")
-                - **BDD/Cucumber with Testcontainers**:
-                  - Use @Testcontainers and @Container in step definitions
-                  - Share container instances across scenarios using singleton pattern
-                  - Reset database state between scenarios using init.db or @BeforeEach cleanup
-                - **Example patterns to follow**:
-                  \`\`\`java
-                  @Testcontainers
-                  @SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT)
-                  class MyIntegrationTest {
-                      @Container
-                      static PostgreSQLContainer<?> postgres = new PostgreSQLContainer<>("postgres:15-alpine")
-                          .withDatabaseName("testdb")
-                          .withInitScript("init.db");
-                      
-                      @DynamicPropertySource
-                      static void configureProperties(DynamicPropertyRegistry registry) {
-                          registry.add("spring.datasource.url", postgres::getJdbcUrl);
-                          registry.add("spring.datasource.username", postgres::getUsername);
-                          registry.add("spring.datasource.password", postgres::getPassword);
-                      }
-                  }
-                  \`\`\`
-            11. **CRITICAL - Test Execution, Coverage & Auto-Fix**:
-                - **STEP 1 - Run ALL Tests**: Execute \`./mvnw clean test\` for ENTIRE test suite (unit + integration + BDD)
-                  - **NOT** just the newly created tests - run ALL tests in the project
-                  - This ensures newly generated tests don't break existing tests
-                  - ALL test types MUST execute: unit tests, integration tests, BDD/Cucumber tests
-                - **STEP 2 - Generate Coverage Report**: Run \`./mvnw jacoco:report\`
-                  - Parse target/site/jacoco/jacoco.xml for coverage metrics
-                  - Verify EVERY changed source file meets 80% line AND branch coverage thresholds
-                  - IF below threshold: Generate additional tests and re-run coverage
-                - **STEP 3 - Add Coverage to PR**:
-                  - Include coverage summary in PR description showing:
-                    - Overall coverage percentage
-                    - Per-file coverage for all changed files
-                    - Comparison with threshold (80%)
-                  - Attach jacoco.xml or coverage report as PR comment
-                - **IF ANY tests fail** (new or existing): Analyze the error messages and fix the issues automatically
-                - Common issues to check and fix:
-                  - **Missing @Mock annotations**: Ensure ALL service dependencies are mocked (e.g., PaymentAuditService, FraudService, etc.)
-                  - **Missing imports**: Add required import statements (e.g., java.time.LocalDateTime, PaymentAuditService)
-                  - **Type mismatches**: Convert types as needed (e.g., double to String using String.valueOf())
-                  - **NullPointerExceptions**: Verify all mocked dependencies are properly initialized
-                  - **Incorrect expected values**: Ensure test assertions match actual service behavior
-                  - **Existing tests failing**: Update existing test files if they're missing mocks for new dependencies
-                - **Re-run ALL tests** (\`./mvnw clean test\`) after each fix until ALL tests pass
-                - **DO NOT commit** until \`./mvnw test\` exits with code 0 (success) for ALL tests in the project
-                - Document any fixes made in the PR description, especially fixes to existing tests
-            12. **IMPORTANT - Test Attribution**: Add a clear Javadoc comment at the top of EVERY generated test file:
-               \`\`\`java
-               /**
-                * Generated by GitHub Copilot Agent
-                * Issue: #<issue-number>
-                * Date: <generation-date>
-                * 
-                * DO NOT EDIT: This test was auto-generated by Copilot Agent.
-                * Review the tests and modify as needed for your specific use case.
-                */
-               \`\`\`
-               For Cucumber feature files, use:
-               \`\`\`gherkin
-               # Generated by GitHub Copilot Agent
-               # Issue: #<issue-number>
-               # Date: <generation-date>
-               # DO NOT EDIT: This test was auto-generated. Review and modify as needed.
-               \`\`\`
-
-            #github-pull-request_copilot-coding-agent
-            `;
+            // Build issue body using concatenation to avoid template literal issues
+            let issueBody = 'Please analyze the beneficiaries repo on branch \'' + branch + '\' and generate tests for changed Java sources.\n\n';
+            issueBody += '**Context:**\n';
+            issueBody += '- Branch: ' + branch + '\n';
+            issueBody += '- Changed files:\n' + (changedFiles || 'Analyze all recent changes on branch') + '\n';
+            issueBody += '- Existing test frameworks detected: ' + (frameworksHint || 'None detected') + '\n';
+            issueBody += '- Dependencies found in pom.xml: ' + (dependencies || 'None detected') + '\n\n';
+            issueBody += '#github-pull-request_copilot-coding-agent';
 
             // Check for existing open issue
             const { data: issues } = await github.rest.issues.listForRepo({
