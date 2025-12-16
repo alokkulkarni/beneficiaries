@@ -453,7 +453,7 @@ jobs:
             }
 
       - name: Close issue with summary
-        if: always()
+        if: always() && steps.create_issue.outputs.issue_number != ''
         uses: actions/github-script@v7
         with:
           script: |
@@ -462,6 +462,12 @@ jobs:
             const agentAction = '${{ steps.wait_for_pr.outputs.agent_action }}';
             const prNumber = '${{ steps.wait_for_pr.outputs.pr_number }}';
             const prBranch = '${{ steps.wait_for_pr.outputs.pr_branch }}';
+            
+            // Skip if no issue was created
+            if (!issueNumber || isNaN(issueNumber)) {
+              console.log('Skipping issue comment - no issue was created');
+              return;
+            }
             
             let summaryComment = '## 🤖 Copilot Agent Workflow Summary\n\n';
             
