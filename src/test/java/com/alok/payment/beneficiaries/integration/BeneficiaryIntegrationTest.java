@@ -17,6 +17,7 @@ import org.springframework.test.context.DynamicPropertySource;
 import org.springframework.test.web.servlet.MockMvc;
 import org.testcontainers.containers.PostgreSQLContainer;
 import org.testcontainers.containers.GenericContainer;
+import org.testcontainers.images.PullPolicy;
 import org.testcontainers.junit.jupiter.Container;
 import org.testcontainers.junit.jupiter.Testcontainers;
 import org.testcontainers.utility.DockerImageName;
@@ -33,17 +34,21 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 @DisplayName("Beneficiary Integration Tests")
 class BeneficiaryIntegrationTest {
     
+    @SuppressWarnings("resource")
     @Container
-    static PostgreSQLContainer<?> postgres = new PostgreSQLContainer<>(
+    static final PostgreSQLContainer<?> postgres = new PostgreSQLContainer<>(
             DockerImageName.parse("ghcr.io/alokkulkarni/testcontainers-registry/testcontainers/postgres:16-alpine").asCompatibleSubstituteFor("postgres"))
+            .withImagePullPolicy(PullPolicy.defaultPolicy())
             .withDatabaseName("beneficiaries_test")
             .withUsername("test")
             .withPassword("test")
             .withInitScript("init.db");
     
+    @SuppressWarnings("resource")
     @Container
-    static GenericContainer<?> redis = new GenericContainer<>(
+    static final GenericContainer<?> redis = new GenericContainer<>(
             DockerImageName.parse("ghcr.io/alokkulkarni/testcontainers-registry/testcontainers/redis:7-alpine").asCompatibleSubstituteFor("redis"))
+            .withImagePullPolicy(PullPolicy.defaultPolicy())
             .withExposedPorts(6379);
     
     @DynamicPropertySource
