@@ -165,7 +165,8 @@ jobs:
         with:
           script: |
             const branch = '${{ steps.parse_branch.outputs.branch }}';
-            const changedFiles = `${{ steps.parse_branch.outputs.changed_files }}`;
+            const changedFilesRaw = `${{ steps.parse_branch.outputs.changed_files }}`.trim();
+            const changedFiles = changedFilesRaw ? changedFilesRaw.split('\n').map(f => `- ${f.trim()}`).join('\n') : '';
             const frameworksHint = '${{ steps.parse_branch.outputs.frameworks_hint }}' || '${{ steps.analyze.outputs.frameworks }}';
             const dependencies = '${{ steps.analyze.outputs.dependencies }}';
             const issueTitle = `Generate tests for branch ${branch} (beneficiaries)`;
