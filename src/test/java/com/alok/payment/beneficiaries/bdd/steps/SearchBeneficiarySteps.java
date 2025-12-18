@@ -158,6 +158,7 @@ public class SearchBeneficiarySteps {
         assertThat(response).isNotNull();
         assertThat(response.getContent()).isNotEmpty();
         assertThat(response.getContent()).allMatch(b -> 
+                b.getBeneficiaryName() != null && 
                 b.getBeneficiaryName().toLowerCase().contains(name.toLowerCase()));
     }
     

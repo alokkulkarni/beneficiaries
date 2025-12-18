@@ -67,7 +67,7 @@ public class CommonSteps {
         // Just verify it exists
         List<Beneficiary> existingBeneficiaries = beneficiaryRepository.findByCustomerId(customerId);
         if (existingBeneficiaries.isEmpty()) {
-            throw new RuntimeException("No beneficiaries found for customer " + customerId + " in init.db");
+            throw new RuntimeException("No beneficiaries found for customer: " + customerId);
         }
     }
     
@@ -77,7 +77,7 @@ public class CommonSteps {
         // Just verify it exists
         List<Beneficiary> existingBeneficiaries = beneficiaryRepository.findByCustomerId(customerId);
         if (existingBeneficiaries.isEmpty()) {
-            throw new RuntimeException("No beneficiaries found for customer " + customerId + " in init.db");
+            throw new RuntimeException("No beneficiaries found for customer: " + customerId);
         }
     }
     
