@@ -71,6 +71,16 @@ public class CommonSteps {
         }
     }
     
+    @Given("I have beneficiaries for customer {string}")
+    public void iHaveBeneficiariesForCustomer(String customerId) {
+        // Data already exists in init.db - no need to create
+        // Just verify it exists
+        List<Beneficiary> existingBeneficiaries = beneficiaryRepository.findByCustomerId(customerId);
+        if (existingBeneficiaries.isEmpty()) {
+            throw new RuntimeException("No beneficiaries found for customer " + customerId + " in init.db");
+        }
+    }
+    
     private BeneficiaryResponse mapToResponse(Beneficiary beneficiary) {
         BeneficiaryResponse response = new BeneficiaryResponse();
         response.setId(beneficiary.getId());
