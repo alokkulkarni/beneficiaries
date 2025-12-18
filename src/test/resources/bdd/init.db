@@ -42,3 +42,55 @@ VALUES
 INSERT INTO beneficiaries (customer_id, account_number, beneficiary_name, beneficiary_account_number, beneficiary_bank_code, beneficiary_bank_name, beneficiary_type, status, created_at, updated_at)
 VALUES 
     ('CUST004', 'ACC005', 'Eva Garcia', '78901234', 'BANK006', 'Sixth Bank', 'DOMESTIC', 'DELETED', CURRENT_TIMESTAMP, CURRENT_TIMESTAMP);
+
+-- Analytics scenarios test data
+-- CUST_ANALYTICS_001 - Customer with multiple beneficiaries for analytics testing
+INSERT INTO beneficiaries (id, customer_id, account_number, beneficiary_name, beneficiary_account_number, beneficiary_bank_code, beneficiary_bank_name, beneficiary_type, status, created_at, updated_at)
+VALUES 
+    (100, 'CUST_ANALYTICS_001', 'ACC100', 'John Smith', '1111111111', 'BANK001', 'First Bank', 'DOMESTIC', 'ACTIVE', CURRENT_TIMESTAMP, CURRENT_TIMESTAMP),
+    (101, 'CUST_ANALYTICS_001', 'ACC100', 'Jane Doe', '2222222222', 'BANK002', 'Second Bank', 'INTERNATIONAL', 'ACTIVE', CURRENT_TIMESTAMP, CURRENT_TIMESTAMP),
+    (102, 'CUST_ANALYTICS_001', 'ACC101', 'Bob Wilson', '3333333333', 'BANK001', 'First Bank', 'DOMESTIC', 'ACTIVE', CURRENT_TIMESTAMP, CURRENT_TIMESTAMP),
+    (103, 'CUST_ANALYTICS_001', 'ACC101', 'Alice Brown', '4444444444', 'BANK003', 'Third Bank', 'DOMESTIC', 'ACTIVE', CURRENT_TIMESTAMP, CURRENT_TIMESTAMP);
+
+-- CUST_DUPLICATES_001 - Customer with duplicate beneficiary names
+INSERT INTO beneficiaries (id, customer_id, account_number, beneficiary_name, beneficiary_account_number, beneficiary_bank_code, beneficiary_bank_name, beneficiary_type, status, created_at, updated_at)
+VALUES 
+    (200, 'CUST_DUPLICATES_001', 'ACC200', 'John Smith', '5555555555', 'BANK001', 'Bank One', 'DOMESTIC', 'ACTIVE', CURRENT_TIMESTAMP, CURRENT_TIMESTAMP),
+    (201, 'CUST_DUPLICATES_001', 'ACC200', 'John Smith', '6666666666', 'BANK002', 'Bank Two', 'DOMESTIC', 'ACTIVE', CURRENT_TIMESTAMP, CURRENT_TIMESTAMP),
+    (202, 'CUST_DUPLICATES_001', 'ACC201', 'Jane Doe', '7777777777', 'BANK003', 'Bank Three', 'INTERNATIONAL', 'ACTIVE', CURRENT_TIMESTAMP, CURRENT_TIMESTAMP),
+    (203, 'CUST_DUPLICATES_001', 'ACC201', 'Bob Wilson', '8888888888', 'BANK004', 'Bank Four', 'DOMESTIC', 'ACTIVE', CURRENT_TIMESTAMP, CURRENT_TIMESTAMP);
+
+-- CUST_NO_DUPLICATES - Customer with unique beneficiary names
+INSERT INTO beneficiaries (id, customer_id, account_number, beneficiary_name, beneficiary_account_number, beneficiary_bank_code, beneficiary_bank_name, beneficiary_type, status, created_at, updated_at)
+VALUES 
+    (300, 'CUST_NO_DUPLICATES', 'ACC300', 'Alice Anderson', '1010101010', 'BANK001', 'Bank Alpha', 'DOMESTIC', 'ACTIVE', CURRENT_TIMESTAMP, CURRENT_TIMESTAMP),
+    (301, 'CUST_NO_DUPLICATES', 'ACC300', 'Bob Baker', '2020202020', 'BANK002', 'Bank Beta', 'DOMESTIC', 'ACTIVE', CURRENT_TIMESTAMP, CURRENT_TIMESTAMP),
+    (302, 'CUST_NO_DUPLICATES', 'ACC301', 'Charlie Chapman', '3030303030', 'BANK003', 'Bank Gamma', 'INTERNATIONAL', 'ACTIVE', CURRENT_TIMESTAMP, CURRENT_TIMESTAMP);
+
+-- CUST_USAGE_001 - Customer with beneficiaries created in 2025 for usage report
+INSERT INTO beneficiaries (id, customer_id, account_number, beneficiary_name, beneficiary_account_number, beneficiary_bank_code, beneficiary_bank_name, beneficiary_type, status, created_at, updated_at)
+VALUES 
+    (400, 'CUST_USAGE_001', 'ACC400', 'Old Beneficiary', '4040404040', 'BANK001', 'Bank One', 'DOMESTIC', 'ACTIVE', '2020-06-01 10:00:00', '2020-06-01 10:00:00'),
+    (401, 'CUST_USAGE_001', 'ACC400', 'New Beneficiary 1', '4141414141', 'BANK002', 'Bank Two', 'DOMESTIC', 'ACTIVE', '2025-03-15 10:00:00', '2025-03-15 10:00:00'),
+    (402, 'CUST_USAGE_001', 'ACC401', 'New Beneficiary 2', '4242424242', 'BANK001', 'Bank One', 'INTERNATIONAL', 'ACTIVE', '2025-07-20 10:00:00', '2025-07-20 10:00:00');
+
+-- CUST_USAGE_002 - Customer with old beneficiaries (before 2010)
+INSERT INTO beneficiaries (id, customer_id, account_number, beneficiary_name, beneficiary_account_number, beneficiary_bank_code, beneficiary_bank_name, beneficiary_type, status, created_at, updated_at)
+VALUES 
+    (500, 'CUST_USAGE_002', 'ACC500', 'Ancient Beneficiary', '5050505050', 'BANK001', 'Bank One', 'DOMESTIC', 'ACTIVE', '2005-01-01 10:00:00', '2005-01-01 10:00:00');
+
+-- CUST_STATUS_CHECK - Customer with both active and inactive beneficiaries for status testing
+INSERT INTO beneficiaries (id, customer_id, account_number, beneficiary_name, beneficiary_account_number, beneficiary_bank_code, beneficiary_bank_name, beneficiary_type, status, created_at, updated_at)
+VALUES 
+    (600, 'CUST_STATUS_CHECK', 'ACC600', 'Active User', '6060606060', 'BANK001', 'Bank One', 'DOMESTIC', 'ACTIVE', CURRENT_TIMESTAMP, CURRENT_TIMESTAMP),
+    (601, 'CUST_STATUS_CHECK', 'ACC601', 'Inactive User', '6161616161', 'BANK002', 'Bank Two', 'DOMESTIC', 'INACTIVE', CURRENT_TIMESTAMP, CURRENT_TIMESTAMP);
+
+-- CUST_GROWTH - Customer with beneficiaries for growth rate calculation
+INSERT INTO beneficiaries (id, customer_id, account_number, beneficiary_name, beneficiary_account_number, beneficiary_bank_code, beneficiary_bank_name, beneficiary_type, status, created_at, updated_at)
+VALUES 
+    (700, 'CUST_GROWTH', 'ACC700', 'User One', '7070707070', 'BANK001', 'Bank One', 'DOMESTIC', 'ACTIVE', '2022-01-01 10:00:00', '2022-01-01 10:00:00'),
+    (701, 'CUST_GROWTH', 'ACC701', 'User Two', '8080808080', 'BANK002', 'Bank Two', 'DOMESTIC', 'ACTIVE', '2024-06-15 10:00:00', '2024-06-15 10:00:00'),
+    (702, 'CUST_GROWTH', 'ACC702', 'User Three', '9090909090', 'BANK003', 'Bank Three', 'DOMESTIC', 'ACTIVE', '2025-12-01 10:00:00', '2025-12-01 10:00:00');
+
+-- Reset sequence to avoid ID conflicts
+SELECT setval('beneficiaries_id_seq', (SELECT MAX(id) FROM beneficiaries));

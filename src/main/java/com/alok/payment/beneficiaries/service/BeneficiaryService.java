@@ -191,7 +191,7 @@ public class BeneficiaryService {
     public Map<String, Object> getCustomerBeneficiaryAnalytics(String customerId) {
         log.info("Generating beneficiary analytics for customer: {}", customerId);
         
-        List<Beneficiary> beneficiaries = beneficiaryRepository.findByCustomerId(customerId);
+        List<Beneficiary> beneficiaries = beneficiaryRepository.findAllByCustomerId(customerId);
         
         Map<String, Object> analytics = new HashMap<>();
         analytics.put("customerId", customerId);
@@ -242,7 +242,7 @@ public class BeneficiaryService {
     public List<Map<String, Object>> findPotentialDuplicates(String customerId) {
         log.info("Searching for potential duplicate beneficiaries for customer: {}", customerId);
         
-        List<Beneficiary> beneficiaries = beneficiaryRepository.findByCustomerId(customerId);
+        List<Beneficiary> beneficiaries = beneficiaryRepository.findAllByCustomerId(customerId);
         
         List<Map<String, Object>> duplicates = beneficiaries.stream()
                 .flatMap(b1 -> beneficiaries.stream()
@@ -279,7 +279,7 @@ public class BeneficiaryService {
         log.info("Generating beneficiary usage report for customer: {} from {} to {}", 
                 customerId, startDate, endDate);
         
-        List<Beneficiary> allBeneficiaries = beneficiaryRepository.findByCustomerId(customerId);
+        List<Beneficiary> allBeneficiaries = beneficiaryRepository.findAllByCustomerId(customerId);
         
         List<Beneficiary> periodBeneficiaries = allBeneficiaries.stream()
                 .filter(b -> b.getCreatedAt().isAfter(startDate) && b.getCreatedAt().isBefore(endDate))

@@ -16,6 +16,9 @@ public interface BeneficiaryRepository extends CrudRepository<Beneficiary, Long>
     @Query("SELECT * FROM beneficiaries WHERE customer_id = :customerId AND status = 'ACTIVE'")
     List<Beneficiary> findByCustomerId(@Param("customerId") String customerId);
     
+    @Query("SELECT * FROM beneficiaries WHERE customer_id = :customerId")
+    List<Beneficiary> findAllByCustomerId(@Param("customerId") String customerId);
+    
     @Query("SELECT * FROM beneficiaries WHERE customer_id = :customerId " +
            "AND (:accountNumber IS NULL OR account_number = :accountNumber) " +
            "AND status = 'ACTIVE'")
@@ -49,13 +52,9 @@ public interface BeneficiaryRepository extends CrudRepository<Beneficiary, Long>
            "AND (:beneficiaryType IS NULL OR beneficiary_type = :beneficiaryType) " +
            "AND (:status IS NULL OR status = :status) " +
            "AND (:beneficiaryBankCode IS NULL OR beneficiary_bank_code = :beneficiaryBankCode) " +
-           "AND (:createdAfter IS NULL OR created_at >= :createdAfter) " +
-           "AND (:createdBefore IS NULL OR created_at <= :createdBefore) " +
-           "ORDER BY " +
-           "CASE WHEN :sortBy = 'createdAt' AND :sortDirection = 'ASC' THEN created_at END ASC, " +
-           "CASE WHEN :sortBy = 'createdAt' AND :sortDirection = 'DESC' THEN created_at END DESC, " +
-           "CASE WHEN :sortBy = 'beneficiaryName' AND :sortDirection = 'ASC' THEN beneficiary_name END ASC, " +
-           "CASE WHEN :sortBy = 'beneficiaryName' AND :sortDirection = 'DESC' THEN beneficiary_name END DESC " +
+           "AND (:createdAfter::timestamp IS NULL OR created_at >= :createdAfter) " +
+           "AND (:createdBefore::timestamp IS NULL OR created_at <= :createdBefore) " +
+           "ORDER BY id DESC " +
            "LIMIT :limit OFFSET :offset")
     List<Beneficiary> searchBeneficiaries(
             @Param("customerId") String customerId,
@@ -76,8 +75,8 @@ public interface BeneficiaryRepository extends CrudRepository<Beneficiary, Long>
            "AND (:beneficiaryType IS NULL OR beneficiary_type = :beneficiaryType) " +
            "AND (:status IS NULL OR status = :status) " +
            "AND (:beneficiaryBankCode IS NULL OR beneficiary_bank_code = :beneficiaryBankCode) " +
-           "AND (:createdAfter IS NULL OR created_at >= :createdAfter) " +
-           "AND (:createdBefore IS NULL OR created_at <= :createdBefore)")
+           "AND (:createdAfter::timestamp IS NULL OR created_at >= :createdAfter) " +
+           "AND (:createdBefore::timestamp IS NULL OR created_at <= :createdBefore)")
     long countBeneficiaries(
             @Param("customerId") String customerId,
             @Param("beneficiaryName") String beneficiaryName,

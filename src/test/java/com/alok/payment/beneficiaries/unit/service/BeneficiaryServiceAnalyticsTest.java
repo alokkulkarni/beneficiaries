@@ -75,7 +75,7 @@ class BeneficiaryServiceAnalyticsTest {
     @DisplayName("Should generate analytics with correct counts")
     void shouldGenerateAnalyticsWithCorrectCounts() {
         // Given
-        when(beneficiaryRepository.findByCustomerId("CUST001"))
+        when(beneficiaryRepository.findAllByCustomerId("CUST001"))
                 .thenReturn(testBeneficiaries);
         
         // When
@@ -88,14 +88,14 @@ class BeneficiaryServiceAnalyticsTest {
         assertThat(analytics.get("activeBeneficiaries")).isEqualTo(2L);
         assertThat(analytics.get("inactiveBeneficiaries")).isEqualTo(1L);
         
-        verify(beneficiaryRepository).findByCustomerId("CUST001");
+        verify(beneficiaryRepository).findAllByCustomerId("CUST001");
     }
     
     @Test
     @DisplayName("Should group beneficiaries by type correctly")
     void shouldGroupBeneficiariesByType() {
         // Given
-        when(beneficiaryRepository.findByCustomerId("CUST001"))
+        when(beneficiaryRepository.findAllByCustomerId("CUST001"))
                 .thenReturn(testBeneficiaries);
         
         // When
@@ -113,7 +113,7 @@ class BeneficiaryServiceAnalyticsTest {
     @DisplayName("Should group beneficiaries by bank correctly")
     void shouldGroupBeneficiariesByBank() {
         // Given
-        when(beneficiaryRepository.findByCustomerId("CUST001"))
+        when(beneficiaryRepository.findAllByCustomerId("CUST001"))
                 .thenReturn(testBeneficiaries);
         
         // When
@@ -131,7 +131,7 @@ class BeneficiaryServiceAnalyticsTest {
     @DisplayName("Should identify most recent beneficiary")
     void shouldIdentifyMostRecentBeneficiary() {
         // Given
-        when(beneficiaryRepository.findByCustomerId("CUST001"))
+        when(beneficiaryRepository.findAllByCustomerId("CUST001"))
                 .thenReturn(testBeneficiaries);
         
         // When
@@ -146,7 +146,7 @@ class BeneficiaryServiceAnalyticsTest {
     @DisplayName("Should handle empty beneficiary list for analytics")
     void shouldHandleEmptyListForAnalytics() {
         // Given
-        when(beneficiaryRepository.findByCustomerId("CUST001"))
+        when(beneficiaryRepository.findAllByCustomerId("CUST001"))
                 .thenReturn(List.of());
         
         // When
@@ -173,7 +173,7 @@ class BeneficiaryServiceAnalyticsTest {
         ben2.setBeneficiaryName("JohnDoe");
         ben2.setBeneficiaryAccountNumber("ACC002");
         
-        when(beneficiaryRepository.findByCustomerId("CUST001"))
+        when(beneficiaryRepository.findAllByCustomerId("CUST001"))
                 .thenReturn(Arrays.asList(ben1, ben2));
         
         // When
@@ -198,7 +198,7 @@ class BeneficiaryServiceAnalyticsTest {
         ben2.setId(2L);
         ben2.setBeneficiaryName("Jane Smith");
         
-        when(beneficiaryRepository.findByCustomerId("CUST001"))
+        when(beneficiaryRepository.findAllByCustomerId("CUST001"))
                 .thenReturn(Arrays.asList(ben1, ben2));
         
         // When
@@ -220,7 +220,7 @@ class BeneficiaryServiceAnalyticsTest {
         ben2.setId(2L);
         ben2.setBeneficiaryName("Jane Smith");
         
-        when(beneficiaryRepository.findByCustomerId("CUST001"))
+        when(beneficiaryRepository.findAllByCustomerId("CUST001"))
                 .thenReturn(Arrays.asList(ben1, ben2));
         
         // When
@@ -238,7 +238,7 @@ class BeneficiaryServiceAnalyticsTest {
         LocalDateTime startDate = now.minusDays(4);
         LocalDateTime endDate = now;
         
-        when(beneficiaryRepository.findByCustomerId("CUST001"))
+        when(beneficiaryRepository.findAllByCustomerId("CUST001"))
                 .thenReturn(testBeneficiaries);
         
         // When
@@ -261,7 +261,7 @@ class BeneficiaryServiceAnalyticsTest {
         LocalDateTime startDate = now.minusDays(4);
         LocalDateTime endDate = now;
         
-        when(beneficiaryRepository.findByCustomerId("CUST001"))
+        when(beneficiaryRepository.findAllByCustomerId("CUST001"))
                 .thenReturn(testBeneficiaries);
         
         // When
@@ -283,7 +283,7 @@ class BeneficiaryServiceAnalyticsTest {
         LocalDateTime startDate = now.minusDays(10);
         LocalDateTime endDate = now;
         
-        when(beneficiaryRepository.findByCustomerId("CUST001"))
+        when(beneficiaryRepository.findAllByCustomerId("CUST001"))
                 .thenReturn(testBeneficiaries);
         
         // When
@@ -303,7 +303,7 @@ class BeneficiaryServiceAnalyticsTest {
         LocalDateTime startDate = now.minusDays(10);
         LocalDateTime endDate = now;
         
-        when(beneficiaryRepository.findByCustomerId("CUST001"))
+        when(beneficiaryRepository.findAllByCustomerId("CUST001"))
                 .thenReturn(List.of());
         
         // When
@@ -331,7 +331,7 @@ class BeneficiaryServiceAnalyticsTest {
         ben2.setBeneficiaryName("Jon Doe");  // 1 character difference
         ben2.setBeneficiaryAccountNumber("ACC002");
         
-        when(beneficiaryRepository.findByCustomerId("CUST001"))
+        when(beneficiaryRepository.findAllByCustomerId("CUST001"))
                 .thenReturn(Arrays.asList(ben1, ben2));
         
         // When
@@ -353,7 +353,7 @@ class BeneficiaryServiceAnalyticsTest {
         ben1.setStatus("ACTIVE");
         ben1.setCreatedAt(LocalDateTime.now());
         
-        when(beneficiaryRepository.findByCustomerId("CUST001"))
+        when(beneficiaryRepository.findAllByCustomerId("CUST001"))
                 .thenReturn(List.of(ben1));
         
         // When
@@ -378,7 +378,7 @@ class BeneficiaryServiceAnalyticsTest {
         ben1.setStatus("ACTIVE");
         ben1.setCreatedAt(LocalDateTime.now());
         
-        when(beneficiaryRepository.findByCustomerId("CUST001"))
+        when(beneficiaryRepository.findAllByCustomerId("CUST001"))
                 .thenReturn(List.of(ben1));
         
         // When

@@ -71,6 +71,16 @@ public class CommonSteps {
         }
     }
     
+    @Given("a beneficiary exists with status:")
+    public void aBeneficiaryExistsWithStatus(Map<String, String> beneficiaryDetails) {
+        // Use pre-existing data from init.db - just fetch it
+        Long beneficiaryId = Long.parseLong(beneficiaryDetails.get("id"));
+        Beneficiary beneficiary = beneficiaryRepository.findById(beneficiaryId)
+                .orElseThrow(() -> new RuntimeException("Beneficiary not found in init.db with id: " + beneficiaryId));
+        testContext.setTestData("existingBeneficiaryId", beneficiary.getId());
+        testContext.setCurrentBeneficiary(mapToResponse(beneficiary));
+    }
+    
     private BeneficiaryResponse mapToResponse(Beneficiary beneficiary) {
         BeneficiaryResponse response = new BeneficiaryResponse();
         response.setId(beneficiary.getId());

@@ -2,6 +2,7 @@ package com.alok.payment.beneficiaries.bdd.steps;
 
 import com.alok.payment.beneficiaries.bdd.context.TestContext;
 import com.alok.payment.beneficiaries.dto.BeneficiaryResponse;
+import com.alok.payment.beneficiaries.dto.PagedResponse;
 import io.cucumber.java.en.Then;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
@@ -77,6 +78,29 @@ public class AssertionSteps {
         List<BeneficiaryResponse> beneficiaries = testContext.getBeneficiaryList();
         assertThat(beneficiaries).isNotNull();
         assertThat(beneficiaries).hasSize(expectedCount);
+    }
+
+    @Then("the paged response should have totalElements {int}")
+    public void thePagedResponseShouldHaveTotalElements(int totalElements) {
+        PagedResponse<BeneficiaryResponse> paged = testContext.getPagedBeneficiaries();
+        assertThat(paged).isNotNull();
+        assertThat(paged.getTotalElements()).isEqualTo(totalElements);
+    }
+
+    @Then("the paged response page is {int} and size is {int}")
+    public void thePagedResponseHasPageAndSize(int page, int size) {
+        PagedResponse<BeneficiaryResponse> paged = testContext.getPagedBeneficiaries();
+        assertThat(paged).isNotNull();
+        assertThat(paged.getPage()).isEqualTo(page);
+        assertThat(paged.getSize()).isEqualTo(size);
+    }
+
+    @Then("the first paged result beneficiaryName contains {string}")
+    public void theFirstPagedResultBeneficiaryNameContains(String namePart) {
+        PagedResponse<BeneficiaryResponse> paged = testContext.getPagedBeneficiaries();
+        assertThat(paged).isNotNull();
+        assertThat(paged.getContent()).isNotEmpty();
+        assertThat(paged.getContent().get(0).getBeneficiaryName()).containsIgnoringCase(namePart);
     }
     
     @Then("the beneficiary should have the following details:")
